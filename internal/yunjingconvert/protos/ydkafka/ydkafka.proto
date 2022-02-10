@@ -1,0 +1,256 @@
+syntax = "proto2";
+package ydkafka;
+option go_package = "./;ydkafka";
+
+// 云镜写入kafka协议  protoc -I=. --go_out=./   ./ydkafka.proto
+
+message EventMsg {
+    required Head head = 1;
+    optional Body body = 2;
+}
+
+message Head {
+    required uint64 appid = 1;
+    required bytes uuid = 2;  // 云镜agent uuid
+    required bytes quuid = 3; // cvm uuid
+    optional bytes hostip = 4; // cvm主机ip
+    required int64 event_time = 5;
+    required EventType event_type = 6;
+    required EventMod event_mod = 7;
+    optional SeverityClass severity_class = 8; // 暂未使用
+}
+
+// 事件类型
+enum EventType {
+    MALWARE = 1;    // 木马
+    LOGIN = 2; // 异常登录
+    BRUTEFORCE = 3; // 爆破
+    VUL = 4; // 漏洞
+    BASH = 5; // 高危命令
+    REVERSE_SHELL = 6; // 反弹shell
+    PRIVILEGE_ESCALATION = 7; // 本地提权
+    NETWORK_ATTACK = 8; // 网络攻击
+    RISK_DNS = 9; // 恶意请求
+    RISK_BASELINE = 10; // 基线
+}
+
+enum SeverityClass {
+    CRITICAL = 10;
+    HIGH = 20;
+    MIDDLE = 30;
+    LOW = 40;
+}
+
+// 变更标志
+enum EventMod {
+    ADD = 1;
+    MOD = 2;
+    DEL = 3;
+    IGN = 4;  // 暂未使用
+}
+
+message Body {
+    optional MalwareBody malware = 1;
+    optional LoginBody login = 2;
+    optional BruteforceBody bruteforce = 3;
+    optional VulBody vul = 4;
+    optional BashBody bash = 5;
+    optional ReverseShellBody reverse_shell = 6;
+    optional PrivilegeEscalationBody privilege_escalation = 7;
+    optional NetworkAttackBody network_attack = 8;
+    optional RiskDnsBody risk_dns = 9;
+    optional BaseLineBody base_line = 10;
+}
+
+// 木马
+message MalwareBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional int32 status = 3; // 事件状态 4: 待处理 5: 已信任 6：已隔离 8：文件已删除 12：事件纪录已删除
+    optional bytes md5 = 4; // 文件md5
+    optional bytes virusname = 5; // 病毒名
+    optional int32 virustype = 6; //病毒类型
+    optional int32 bwtype = 7; // 样本属性 10: 白 20~29: 黑
+    optional bytes filepath = 8; // 文件路径
+    optional uint64 filesize = 9; // 文件大小
+    optional int64 file_access_time = 10; // 文件访问时间
+    optional int64 file_create_time = 11; // 文件创建时间
+    optional int64 file_modify_time = 12; // 文件修改时间
+    optional int64 int64_pid = 13;                    //运行进程pid
+    optional bytes exe = 14;                         //相关进程
+    optional bytes cmdline = 15;                     //命令行参数
+    optional int32 detect_by = 16;
+    optional int64 create_time = 17; // 首次发现时间
+    optional int64 latest_scan_time = 18; // 最近检查时间
+}
+
+// 异常登录
+message LoginBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional int32 status = 3; // 1: 正常登陆 2：异常登录 5：已加白 7：已删除
+    optional bytes username = 4; // 登录用户名
+    optional bytes src_ip = 5; // 登录来源IP
+    optional int32 dst_port = 6; //登录端口
+    optional int64 count = 7; // 登录次数 （1分钟聚合一次）
+    optional int64 login_time = 8; // 登录时间
+    optional int64 create_time = 9;
+    optional int32 risk_level = 10; // 风险等级：0高危，1可疑
+}
+
+// 暴力破解
+message BruteforceBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional int32 status = 3; // 事件状态 0: 待处理 1: 已忽略 2：误报 3：已删除 4：白名单
+    optional bytes username = 4; // 用户名
+    optional bytes src_ip = 5; // 来源IP
+    optional int32 dst_port = 6; // 来源端口
+    optional int64 count = 7; // 尝试次数次数
+    optional int32 event_type = 8; // 事件类型 200: 爆破失败 300: 爆破成功 400：爆破不存在的账号
+    optional bytes protocol = 9; // 应用协议，为空时为ssh/rdp
+    optional int32 banned = 10; // 阻断状态: 0未阻断，1已阻断，81未阻断(未开启阻断)，82未阻断(非专业版)，83未阻断(已加白名单)，85未阻断(未绑定公网IP)，2阻断失败(接口异常)，3阻断失败(内网不支持),4阻断失败(可用区不支持)
+    optional int64 create_time = 11;
+}
+
+// 漏洞
+message VulBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional int32 status = 3;  // 漏洞状态 0: 待处理 1:已忽略  3:已修复 5:检测中 6:修复中 8:修复失败
+    optional uint32 vul_id = 4; // 漏洞poc id
+    optional uint32 vul_category = 5; // 漏洞分类 1: web应用漏洞 2:系统组件漏洞 3:安全基线 4: Linux系统漏洞 5: windows系统漏洞
+    optional bytes vul_name = 6; // 漏洞名
+    optional uint32 vul_level = 7; // 漏洞等级 1:低 2:中 3:高 4:提示
+    optional bytes description = 8; // 漏洞事件详情
+    optional bytes vul_fix = 9; // 暂未使用
+    optional bytes vul_reference = 10; // 暂未使用
+    optional bytes cve_id = 11; // 暂未使用
+    optional int64 create_time = 12;
+}
+
+// 高危命令
+message BashBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional bytes user = 3;    // 执行的用户
+    optional bytes bash_cmd = 4; // 执行的命令
+    optional int64 rule_id = 5; // 命中的规则id 10000及以下系统规则，10000以上用户规则
+    optional bytes rule_name = 6; // 命中的规则名
+    optional int32 rule_level = 7; // 命令危险等级 1: 高危 2:中危 3: 低危
+    optional int64 exec_time = 8; // 命令执行时间
+    optional int32 status = 9; //  0: 危险命令,待处理 1: 危险命令 2：正常命令
+    optional uint32 pid = 10;
+    optional bytes exe = 11; // 进程名
+    optional int64 create_time = 12;
+    optional int32 rule_type = 13; // 0系统规则，1用户规则
+}
+
+// 反弹shell
+message ReverseShellBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional bytes dest_ip = 3; // 目的IP
+    optional uint32 dest_port = 4;  // 目的端口
+    optional bytes process_name = 5; // 执行的进程
+    optional bytes full_path = 6; // 进程路径
+    optional uint32 pid = 7; // 进程id
+    optional bytes cmd_line = 8; // 执行的命令
+    optional bytes user_name = 9; // 执行的用户
+    optional bytes user_group = 10; //执行用户所属组
+    optional uint32 ppid = 11;
+    optional bytes parent_proc_name = 12;
+    optional bytes parent_proc_user = 13;
+    optional bytes parent_proc_group = 14;
+    optional bytes parent_proc_path = 15;
+    optional int64 find_time = 16; // 执行时间
+    optional bytes proc_tree = 17; // 进程树
+    optional int32 status = 18; // 0: 反弹shell事件，待处理 1:提权事件 2:白名单
+    optional int64 create_time = 19;
+
+}
+
+// 本地提权
+message PrivilegeEscalationBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional int32 status = 3; // 0: 提权事件，待处理 1:提权事件 2:白名单
+    optional bytes proc_file_privilege = 4; // 进程文件权限信息
+    optional bytes process_name = 5;
+    optional bytes full_path = 6;
+    optional uint32 pid = 7;
+    optional bytes cmd_line = 8;
+    optional bytes user_name = 9;
+    optional bytes user_group = 10;
+    optional uint32 ppid = 11;
+    optional bytes parent_proc_name = 12;
+    optional bytes parent_proc_user = 13;
+    optional bytes parent_proc_group = 14;
+    optional bytes parent_proc_path = 15;
+    optional int64 find_time = 16;
+    optional bytes proc_tree = 17;
+    optional uint32 sid = 18;
+    optional uint32 uid = 19;
+    optional uint32 gid = 20;
+    optional uint32 euid = 21;
+    optional uint32 egid = 22;
+    optional int64 create_time = 23;
+}
+
+// 网络攻击
+message NetworkAttackBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional bytes src_ip = 3; // 来源IP
+    optional uint32 src_port = 4; // 来源端口
+    optional bytes http_method = 5;
+    optional bytes http_host = 6;
+    optional bytes http_cgi = 7;
+    optional bytes http_param = 8;
+    optional bytes http_content = 9;
+    optional bytes http_head = 10;
+    optional bytes http_user_agent = 11;
+    optional bytes http_referer = 12;
+    optional bytes dst_ip = 13; // 目标IP
+    optional uint32 dst_port = 14; // 目标端口
+    optional bytes vul_type = 15; // 攻击方式说明， 如：命令注入，疑似webshell等
+    optional int64 create_time = 16;
+    optional bytes chinese = 17; // 中文描述
+    optional bytes english = 18; // 英文描述
+}
+
+// 恶意请求
+message RiskDnsBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional bytes url = 3;
+    optional uint32 pid = 4;
+    optional bytes process_md5 = 5;
+    optional bytes process_name = 6;
+    optional bytes cmd_line = 7;
+    optional uint32 global_rule_id = 8; // 关联dns_knowledge id
+    optional uint32 rule_source = 9; // 1:用户黑名单，2：用户白名单；3：系统黑名单；4：管家安知系统；5：管家运营组威胁情报知识库
+    optional uint32 rule_id = 10;
+    optional uint32 status = 11; // 状态：0待处理，1已删除，2已加白
+    optional uint32 access_count = 12; // 请求次数
+    optional int64 query_time = 13; // 首次请求时间
+    optional int64 merge_time = 14; // 最近请求时间
+    optional int64 create_time = 15;
+}
+
+// 基线
+message BaseLineBody {
+    optional bytes table_name = 1;
+    optional uint64 table_id = 2;
+    optional bytes name = 3; // 基线名称
+    optional uint32 from = 4; // 数据源：0新版，1旧版
+    optional uint32 status = 5; // 状态：0未通过，1忽略，2通过，5检测中
+    optional uint32 level = 6; // 等级：1低危，2中危，3高危，4严重
+    optional uint32 rule_id = 7; // 检测项ID
+    optional uint32 category_id = 8; // 基线分类id
+    optional bytes descript = 9; // 描述
+    optional bytes remark = 10; // 备注
+    optional int64 create_time = 11; // 创建时间
+    optional int64 modify_time = 12; // 修改时间
+    optional int64 latest_scan_time = 13; // 最近扫描时间
+}

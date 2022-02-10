@@ -1,0 +1,1763 @@
+// 说明主机安全前后台接入协议
+
+syntax = "proto2";
+package ydeyes;
+
+option go_package = "./;ydeyes";
+//--------------------------------------------------------------------------------------------
+// 请求包:           STX_C + dwHeadLen + dwBodyLen + Head + Body(不同命令字不同格式) + ETX_C
+// 响应可选回包 : STX_C + dwHeadLen + dwBodyLen + Head + Body(不同命令字不同格式) + ETX_C
+// STX_C=0x2E   ETX_C=0x36
+// Head 不加密，关键字段不要在Head扩展
+// Body 需要加密，文件上报的要压缩
+//--------------------------------------------------------------------------------------------
+
+message MsgCmd
+{
+  enum TcpProtoDelimiter
+  {
+    TCP_STX_C = 0x2E;
+    TCP_ETX_C = 0x36;
+  }
+  enum HttpProtoDelimiter
+  {
+    HTTP_STX_C = 0x28;
+    HTTP_ETX_C = 0x29;
+  }
+  enum maincmd
+  {
+    // 木马
+    cmd_webshell_file_scan = 0x03;      //木马文件上报检测
+    cmd_webshell_md5_query = 0x04;      //木马MD5上报云查系统账户
+    cmd_webshell_quara = 0x06;          //隔离/恢复结果上报
+    cmd_file_check = 0x33;              //验证文件是否存在
+
+    cmd_bruteforce_evt = 0x05;          //暴力破解
+    cmd_fast_report = 0x07;             //EDR数据采集
+    cmd_heart_beat = 0x10;              //心跳
+    cmd_agent_initial = 0x11;           //初始化
+    cmd_push_msg = 0x12;                // push 命令
+    cmd_host_login = 0x13;              //登录流水
+    cmd_json_event = 0x16;              //漏洞基线
+    cmd_dns = 0x17;                     //old, not valid
+    cmd_user_account = 0x18;            //上报系统账户信息
+    cmd_open_port_report = 0x19;        //上报开放端口信息
+    cmd_process_info = 0x20;            //agent 上报进程信息
+    cmd_dns_answer = 0x21;              //新增dns 协议，会逐步替代老的dns协议
+    cmd_dynamic_config = 0x22;          //for user define config
+    cmd_dns_query = 0x23;               //dns with process info
+    cmd_secure_monitor = 0x24;          //注册表，文件监控等
+    cmd_agent_monitor = 0x25;           //agent cpu, memory monitor
+    cmd_crash_report = 0x26;            //crash上报
+    cmd_saic_sign_check = 0x27;         //上汽签名验证
+    cmd_user_cmd_report = 0x28;         //用户命令行上报
+    cmd_privilege_escalation = 0x29;    //本地提权
+    cmd_ymon = 0x30;                    //registry monitor
+    cmd_filemodify = 0x31;              //file modify
+    cmd_reverse_shell = 0x32;           //反弹shell
+    cmd_to_yd_common = 0x9999;          //server内部消息负载均衡转发使用
+    cmd_webserver_info = 0x40;          //上报基于web server检测出的web root目录
+    cmd_crontab_report = 0x41;          //上报机器crontab
+    cmd_tamper_protect = 0x50;          //网页防篡改
+    cmd_vulner_detect = 0x60;           //新版漏扫（青藤）
+    cmd_baseline_detect = 0x61;         //新版基线
+    cmd_asset_scan = 0x62;              //新版资产管理
+    cmd_remote_task_comm = 0x63;            //自定义remote task(容器安全)
+    cmd_tcss_baseline_detect = 0x64;        //tcss baseline检测
+    cmd_hids_task_comm = 0x65;              //自定义remote task(主机安全用)
+    cmd_malware = 0x70;                 //木马（恶意文件）
+    cmd_tcs_malware = 0x71;             //木马（容器镜像扫描）
+    cmd_tcs_runtime = 0x72;             // 容器策略中心
+    cmd_usrcfgV2 = 0x73;
+    cmd_http_event = 0x74;              // http接入层消息
+    cmd_fimfilemon = 0x75;
+    cmd_tcs_runtime_malware = 0x76;
+  }
+
+  enum subcmd
+  {
+    option allow_alias = true;
+    dns_report = 0x100;
+    file_check_query = 0x100;
+    init_login_rsp = 0x01;
+    init_sync_login_info = 0x02;
+    sub_cmd_bruteforce = 0x200;
+
+    push_msg = 0x300;
+    push_resp = 0x301;
+    push_ack = 0x302;
+
+    all_user_account = 0x01;      //全量上报系统账户信息
+    modified_user_account = 0x02;  //增量上报系统账户信息
+    user_def_config_req = 0x00;
+    user_def_config_rsp = 0x01;
+    report_all_open_port_info = 0x00;
+
+    sub_cmd_ymon_reg = 0x100;
+    sub_cmd_file_modify = 0x101;
+
+    // 木马
+    webshell_md5_query_report    = 0x100;     //木马MD5云查上报
+    webshell_file_content_get    = 0x101;     //下发提取木马文件
+    webshell_file_content_report = 0x102;     //木马文件上报检测
+    webshell_quara_succ    = 0x108;           //隔离成功
+    webshell_quara_fail    = 0x109;           //隔离失败
+    webshell_quara_restore_succ = 0x110;      //隔离后恢复成功
+    webshell_quara_restore_failed = 0x111;    //隔离后恢复失败
+    webshell_quara_notfound    = 0x112;       //隔离时文件已删除
+    file_check = 0x01;                        //验证文件是否存在上报
+
+
+    //网页防篡改
+    tamper_protect_config_request = 0x01;
+    tamper_protect_config_response = 0x02;
+    tamper_protect_start_request = 0x03;
+    tamper_protect_start_response = 0x04;
+    tamper_protect_backup_files_request = 0x05;
+    tamper_protect_backup_files_response = 0x06;
+    tamper_protect_up_file_request = 0x07;
+    tamper_protect_up_file_response = 0x08;
+    tamper_protect_report_files_request = 0x09;
+    tamper_protect_report_files_response = 0x10;
+    tamper_protect_down_file_request = 0x11;
+    tamper_protect_down_file_response = 0x12;
+    tamper_protect_recover_result_request = 0x13;
+    tamper_protect_recover_result_response = 0x14;
+    tamper_protect_stop_request = 0x15;
+    tamper_protect_stop_response = 0x16;
+
+    //新版漏扫（青藤）
+    vulner_detect_request = 0x01;
+    vulner_detect_response = 0x02;
+    vulner_detect_message = 0x03;
+    vulner_detect_stop_request = 0x04;  //下发终止扫描请求
+    vulner_detect_stop_response = 0x05;  //确认收到终止扫描请求
+
+    //新版基线
+    baseline_detect_request = 0x01;
+    baseline_detect_response = 0x02;
+    baseline_detect_message = 0x03;
+
+    //木马
+    //木马扫描
+    malware_scan_request = 0x01;  //下发扫描请求
+    malware_scan_ack = 0x02;  //确认收到扫描请求
+    malware_scan_response = 0x03; //扫描结果响应
+    malware_scan_stop_request = 0x04;  //下发终止扫描请求
+    malware_scan_stop_response = 0x05;  //确认收到终止扫描请求
+    //木马监控
+    malware_monitor_push_request = 0x06;   //通知客户端变更监控请求
+    malware_monitor_push_response = 0x07;  //通知客户端变更监控响应
+    malware_monitor_pull_request = 0x08;   //客户端拉取监控配置请求
+    malware_monitor_pull_response = 0x09;  //客户端拉取监控配置响应
+
+    // TCS容器镜像木马扫描，仅用于proxy和common转发，消费端在tcs后端处理
+    tcs_malware_scan_image = 0x01;
+    tcs_malware_scan_image_ack = 0x02;
+    tcs_malware_report_hash = 0x03;
+    tcs_malware_report_hash_ack = 0x04;
+    tcs_malware_report_file = 0x05;
+    tcs_malware_report_file_ack = 0x06;
+    tcs_malware_scan_image_cancel = 0x07;
+
+    // 容器运行时策略中心
+    tcs_runtime_query_policy = 0x01;          // c->s
+    tcs_runtime_query_ack = 0x02;             // s->c
+    tcs_runtime_notify = 0x03;                // s->c 通知agent更新策略
+    tcs_runtime_notify_ack = 0x04;            // c->s ack
+
+      // 新版策略
+    usrcfgV2_notify = 0x01;     // s->c
+    usrcfgV2_notify_ack = 0x02; // c->s
+    usrcfgV2_query = 0x03;      // c->s
+    usrcfgV2_query_ack = 0x04;  // s->c
+
+    // http event
+    http_detect_vmcore = 0x1;
+    http_detect_taint = 0x2;
+
+    // 核心文件篡改监控
+    fim_create_baseline = 0x01;        // s->c
+    fim_baseline_ack = 0x02;           // c->s
+    fim_baseline_stop = 0x03;          // s->c
+    fim_baseline_stop_response = 0x04; // c->s
+    fim_baseline_response = 0x05;      // c->s
+    fim_integrity_check = 0x06;        // s->c
+    fim_check_ack = 0x07;              // c->s
+    fim_report_result = 0x08;          // c->s
+    fim_check_stop = 0x09;             // s->c
+    fim_check_stop_response = 0x10;    // c->s
+
+    // 容器木马扫描
+    tcs_malware_scan_container = 0x00;
+    tcs_malware_scan_container_ack = 0x01;
+    tcs_malware_scan_container_cancel = 0x02;
+    tcs_malware_report_container_hash = 0x03;
+    tcs_malware_report_container_hash_ack = 0x04;
+    tcs_malware_report_container_file = 0x05;
+    tcs_malware_report_container_file_ack = 0x06;
+  }
+}
+
+enum Platform {
+  PLATFORM_UNKNOWNTYPE = 0;
+  PLATFORM_WIN32 = 1;
+  PLATFORM_WIN64 = 2;
+  PLATFORM_LINUX32 = 3;
+  PLATFORM_LINUX64 = 4;
+}
+
+enum RspCode {
+  RSP_CODE_SUCCESS = 0;
+  RSP_CODE_ERROR = 1;
+}
+
+enum SpecimenBwType{
+  NULL_BW_TYPE = 0;
+  WHITE_BW_TYPE = 10;
+  BLACK_BW_TYPE = 20;
+
+  BLACK_BW_TYPE_MAN1 = 21;
+  BLACK_BW_TYPE_MAN2 = 22;
+
+  GRAY_BW_TYPE = 30;
+}
+
+enum FileType{
+  FILETYPE_UNKNOWN = -1;
+  FILETYPE_SCRIPT = 0;
+  FILETYPE_BIN = 1;
+}
+
+enum EventsMalwareStatus {
+  EVT_MALWARE_STATUS_INIT = 0;
+  EVT_MALWARE_STATUS_SHOW = 4;
+  EVT_MALWARE_STATUS_TRUST = 5;
+  EVT_MALWARE_STATUS_QUARA = 6;
+  EVT_MALWARE_STATUS_WHITE = 7;
+  EVT_MALWARE_STATUS_DELETE = 8;
+  EVT_MALAWRE_STATUS_QUARAING = 10;
+  EVT_MALAWRE_STATUS_RESTORING = 11;
+  EVT_MALAWRE_STATUS_EVTDEL = 12;
+}
+
+message YdMalwareAttr
+{
+  optional bytes virusname = 1;
+  optional int32 bwtype = 2;
+  optional int32 bintype = 3;
+}
+//--------------------------------------------------------------------------------------------
+//后台使用
+message AppendInternal
+{
+  optional uint64 appid = 1;          //the user's appid
+  optional bytes  uuid = 2;
+  optional uint64 recv_time = 3;      //the timestamp that yd_proxy received this msg
+
+  optional int64 event_malware_id = 4;    //if evt insert into events_malware table, update this field
+  optional YdMalwareAttr malware_attr = 5;  //check result
+  optional bool is_pro_version = 6;      //专业版的机器，会设置该字段，并设置为true， 非专业版机器该字段不添加
+  optional bytes quuid = 7;          //针对黑石的机器agent 获取的quuid 是不对的，需要在头部设置正确的quuid 供后续逻辑使用, 该字段只会针对黑石机器设置，其它机器不设置
+  optional uint64 agent_flow_id = 8;
+  optional bytes proxy_ip = 9;
+  optional bytes malware_check_result = 10;
+}
+
+message Head
+{
+  optional uint32 uint32_command = 1;         //主命令号
+  optional uint32 uint32_subcmd = 2;          //子命令号
+  optional uint32 uint32_seq = 3;             //序列�? 用于给请求方区分不同的请求回
+  optional uint32 uint32_appid = 4;           //not used by server
+  optional uint32 uint32_store_tag = 5;       //是否保存本地CDB: 1 - 入TDW; 2 - 入CDB; 3 - 入TDW&CDB
+  optional uint32 uint32_localip = 6;         //本机局域网ip(bind socket�?ip)
+  optional uint32 uint32_version = 7;         //客户端版本号
+  optional uint32 uint32_result = 8;          //返回�? 0--处理正确,  1-1999--自定义返回码
+  optional AppendInternal appendInternal = 9; //for service internal use
+  optional bytes  encrypt_uuid = 10;      //agent上报的加密uuid，proxy解密后写入 AppendInternal,server端从AppendInternal中读取解密后的uuid, 2018/01 之后的agent 版本支持该字段
+  optional uint32 uint32_crc = 11;      //body crc
+  optional bytes trace_id = 13;
+  optional bytes hostip = 14;
+  optional bool  body_gzip = 15;    // body是否使用gzip压缩
+}
+
+//--------------------------------------------------------------------------------------------
+message IdValue {
+  optional uint32 uint32_rpt_id = 1;          // 对不同业务分配不同ID�?
+  optional bytes bytes_cdb_table = 2;         // 上报到CDB时候的表名�?
+  optional bytes bytes_rpt_data = 3;          // 上报数据，以","分隔的字符串形式�?
+};
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+//业务�?
+message ReqBody
+{
+  //自定义扩�?
+  repeated IdValue  IdValue_reportdata = 1;  //上报数据
+
+};
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+//回包信息，需要时扩展
+message RspBody
+{
+  optional string  string_errmsg = 1;        // 错误消息提示
+}
+//--------------------------------------------------------------------------------------------
+
+enum FileOptCode {
+  FILE_CREATE = 0;
+  FILE_WRITE = 1;
+  FILE_DEL = 2;
+}
+//--------------------------------------------------------------------------------------------
+//恶意文件事件上报和返回都用这个
+message WebShell {
+  required bytes bytes_guid = 1;                    //GUID
+  required bytes bytes_uuid = 2;                    //UUID
+  required bytes bytes_file_path = 3;               //文件全路径
+  required bytes bytes_file_md5 = 4;                //文件md5
+  optional bytes bytes_result = 5;                  //本地检测的结果
+  optional uint64 uint64_reason = 6;                //ntfs监控时的reason，位标识了create、write、overwrite等状态
+  optional int64 int64_file_size = 7;               //文件大小
+  optional int64 int64_file_createtime = 8;         //文件创建时间
+  optional int64 int64_file_modifiertime = 9;       //文件修改时间
+  optional int64 int64_file_accesstime = 10;        //文件访问时间
+  optional bytes bytes_file_content = 11;           //文件内容
+  optional int32 int32_file_bwtype = 12;            //文件黑白类型
+  optional bytes bytes_file_owner = 13;             //文件创建者
+  optional bytes bytes_file_pathmd5 = 14;           //文件路径的md5
+  optional int32 int32_opret = 15;                  //文件操作返回码
+  optional int32 int32_chunk_size = 16;             //分片大小
+  optional int32 int32_chunk_total = 17;            //片总数
+  optional int32 int32_chunk_index = 18;            //当前第几片
+//  optional int64 int64_pid = 19;              //运行进程pid  (废弃，改用进程树)
+//  optional bytes exe = 20;                    //相关进程  (废弃，改用进程树)
+//  optional bytes cmdline = 21;                //命令行参数  (废弃，改用进程树)
+  enum DetectBy {
+        FileMon = 0;        // 文件实时监控检出
+        FileScan = 1;       // 文件扫描检出
+        ProcScanExe = 2;    // 进程扫描EXE检出
+        ProcScanDll = 3;    // 进程扫描DLL检测
+        ProcScanScript = 4; // 进程扫描脚本参数检出
+        DriverScan = 5;     // 驱动扫描检出
+        DriverMon = 6;      // 驱动加载监控检出
+        ProcMonExe = 7;     // 进程启动监控exe检出
+        ProcMonDll = 8;     // 进程启动监控dll检出
+        ProcMonScript = 9;  // 进程启动脚本参数检出
+    }
+  optional DetectBy detect_by = 22;
+  repeated PsParent pstree = 23; // 进程树详情，json格式
+};
+
+message PsParent {
+  required uint32 pid = 1;           // 进程pid
+  required bytes exe = 2;            // 进程exe
+  required bytes cmdline = 3;        // 进程命令行
+  required bytes account = 4;        // 进程账号 user:group
+  required uint32 start_time = 5;    // 启动时间
+  required bytes exe_perm = 6;       // 文件权限
+  required uint32 exe_mtime = 7;     // 文件修改时间
+  required uint32 sessionid = 8;     // sessionid
+  required bytes ssh_source = 9;     // ssh登录源: src_ip src_port local_ssh_ip local_ssh_port 例如:113.108.77.53 5770 10.0.0.5 22
+}
+//--------------------------------------------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------------------
+//登录和暴力破解事件
+message BruteForce {
+  enum BruteForceType
+  {
+    EVT_LOGINOK = 100;        //登录成功,登录流水使用
+    EVT_HACKING = 200;        //暴力破解失败
+    EVT_HACKOK = 300;         //暴力破解成功, 登录成功前一分钟内如果有登录失败记录则认为是暴破成功
+    EVT_INVALIDLOGIN = 400;   //暴力破解无效账号
+  }
+  enum LoginType
+  {
+    INVALID_SSH_USER = 0;   // invalid user
+    SSH_FAILED_PWD = 1;     // Failed password for
+    SSH_LOGIN_PWD = 2;      // Accepted password for
+    PUBLIC_KEY_LOGIN = 3;   // Accepted publickey for
+    UNIX_SSH_LOGIN = 4;     // pam_unix.*sshd:auth.*authentication failure
+    UNIX_SSH_FAIL = 5;      // pam_unix.*sshd:auth.*authentication failure.*tty
+    INTER_SSH_LOGIN = 6;    // Accepted keyboard-interactive/pam for
+    INTER_SSH_FAIL = 7;     // Failed keyboard-interactive/pam
+    MNET_SSH_FAIL = 8;      // error: PAM: Authentication failure for
+  }
+  required bytes bytes_guid = 1;                   //GUID
+  required bytes bytes_uuid = 2;                   //UUID
+  required int32 int32_event_type = 3;             //事件类型
+  optional int32 int32_stat_count = 4;             //当前统计次数
+  optional bytes bytes_user_name = 5;              //暴力破解的用户名
+  optional bytes bytes_src_ip = 6;                 //暴力破解源ip地址
+  optional int32 int32_dst_port = 7;               //暴力破解目标port地址
+  optional bytes bytes_src_machine = 8;            //暴力破解源主机名字（允许为空�?
+  optional int64 int64_logintime = 9;              //客户端登录时�
+  optional bytes bytes_quuid = 10;                 // added 2018-08
+  optional LoginType login_type = 11;
+  optional bytes bytes_log_time = 12;              //日志中的时间 Sep 17 19:34:03
+};
+//--------------------------------------------------------------------------------------------
+
+
+
+//--------------------------------------------------------------------------------------------
+//心跳，客户端服务端相关
+message HeartBeat {
+  required bytes   bytes_guid = 1;                   //GUID
+  required bytes   bytes_uuid = 2;                   //UUID
+  optional uint32  uint32_nextdelta = 3;             //下次心跳间隔
+};
+//--------------------------------------------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------------------
+//登录初始信息
+message ReqMachineInfo
+{
+  required bytes bytes_guid = 1;               //GUID
+  required bytes bytes_uuid = 2;               //UUID
+  required bytes bytes_machine_name = 3;       //主机名字
+  optional int32 int32_bind_port = 4;         //主机绑定的端�?
+  optional bytes bytes_iplist = 5;             //主机枚举的所有ip列表
+  optional bytes bytes_cpuid = 6;             //cpuid
+  optional bytes bytes_macs = 7;               //所有mac列表
+  optional bytes bytes_hd_name = 8;            //c盘所在硬盘名�?
+  optional bytes bytes_mem_name = 9;           //内存名字
+  optional bytes bytes_mb_name = 10;           //主板名字
+  optional bytes bytes_bios_info = 12;         //bios信息
+  optional bytes bytes_os_info = 13;           //如windows server 2012
+  optional bytes bytes_platform = 14;          //win32 win64 linux32 or linux64
+  optional int32 int32_pid = 15;               //进程pid
+  optional bytes bytes_app_name = 16;          //发起连接的进程名�?
+  optional int64 int64_app_start_time = 17;    //进程启动时间
+  optional int64 int64_app_inst_time = 18;     //程序安装到客户端的时�?从注册表�?
+  optional int64 int64_os_start_time = 19;     //操作系统开机时�?
+  optional bytes bytes_region = 20;            //客户端所在的网络区域(qcloud),先固定（由安装程序安装时候固定到注册表）
+  optional bytes bytes_update_ver = 21;         //更新程序的版�?
+  optional bytes bytes_rtp_ver = 22;           //rtp进程的版�?
+  optional bytes bytes_cookie = 23;            //对应数据库cookie字段，如果有则写入数据库�?
+  optional bytes bytes_key = 24;               //客户端绑定腾讯云的字�?
+  optional bytes bytes_quuid = 25;             //子机元数�?腾讯云uuid
+  optional bytes bytes_instanceid = 26;        //子机元数�?实例id
+  optional bytes bytes_placement_region = 27;  //子机元数�?实例所在地域信�
+  optional bytes bytes_placement_zone = 28;    //子机元数�?实例所在可用区信息
+  optional bytes bytes_token = 29; //用户标识，混合云环境下关联用户资产
+};
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+//登录初始化返回
+message RspMachineInfo
+{
+  required bytes bytes_guid = 1;                  //GUID
+  required bytes bytes_uuid = 2;                  //UUID
+  optional bytes bytes_app_config = 3;            //ydeyes程序配置，对应数据库字段: app_config
+  optional bytes bytes_collection_config = 4;     //日志采集配置 对应数据库字�? collection_config
+  optional bytes bytes_security_config = 5;       //安全功能配置（waf、firewall、webshell集成一个xml）对应数据字段：security_config
+  optional bytes bytes_pre_operate = 6;           //登录后的预操作：对应字段：pre_operate
+  optional bytes bytes_reason = 7;                //登录失败的原因（用该字符串表示，服务器程序内定义好）
+};
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+//push命令
+message PushCommand {
+  required bytes bytes_guid = 1;                  //GUID
+  required bytes bytes_uuid = 2;                  //UUID
+  required int32 int32_op_type = 3;               //操作类型
+  required bytes bytes_op_id = 4;                 //push全局id 类似生成一个guid,对应数据库id
+  optional bytes bytes_arg1 = 5;                  //参数1 根据 int32_op_type，后端定�?
+  optional bytes bytes_arg2 = 6;                  //参数2 根据 int32_op_type，后端定�?
+  optional bytes bytes_arg3 = 7;                  //参数3 根据 int32_op_type，后端定�?
+  optional bytes bytes_arg4 = 8;                  //参数4 根据 int32_op_type，后端定�?
+  optional bytes bytes_arg5 = 9;                  //参数5 根据 int32_op_type，后端定�?
+  optional bytes bytes_arg6 = 10;                 //参数6 根据 int32_op_type，后端定�?
+  optional int32 int32_result_id = 11;            //结果记录id
+}
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+//push命令的return
+message RetCommand {
+  required bytes bytes_guid = 1;                //GUID
+  required bytes bytes_uuid = 2;                //UUID
+  required int32 int32_op_type = 3;             //操作类型
+  required bytes bytes_op_id = 4;               //push全局id 类似生成一个guid,对应数据库id
+  required int32 int32_retcode = 5;             //返回执行过程结果，等价于函数返回�?
+  required int32 int32_fincode = 6;             //返回执行是否完结的状�?1=执行正常结束 �?=不正�?
+  optional bytes bytes_message = 7;             //返回执行提示信息，等价于函数返回的字符串值（如参数错误，执行成功等）
+  optional bytes bytes_exeout = 8;              //返回execute执行输出结果
+  optional bytes bytes_result = 9;              //返回业务需要的结果
+  optional int32 int32_result_type = 10;        // 0=不需要返回数据，1=表示执行stdout输出存exeout 2=文本数据存result 3=二进制输出存result 4=文件存hdfs
+}
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+// 漏洞扫描返回数据
+message JsonProto {
+  required bytes bytes_guid = 1;                //GUID
+  required bytes bytes_uuid = 2;                //UUID
+  optional bytes bytes_quuid = 3;             //å­�æœºå…ƒæ•°æ�¿è…¾è®¯äº‘uuid
+  optional bytes bytes_json = 4;
+}
+//--------------------------------------------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------------------
+// dns解释记录
+message DnsRecord {
+  required bytes bytes_guid = 1;
+  required bytes bytes_uuid = 2;
+  optional bytes bytes_quuid = 3;
+  optional uint32 uint32_time = 4;        // utc
+  optional uint32 uint32_saddr = 5;
+  optional uint32 uint32_sport = 6;
+  optional uint32 uint32_daddr = 7;
+  optional uint32 uint32_dport = 8;
+  optional bytes bytes_url = 9;          // json -> query
+  optional uint32 uint32_count = 10;        // url count
+  optional bytes bytes_packet = 11;        // json  -> answer -> json array
+};
+
+message DnsAnswer {
+  optional bytes  ans_name = 1;
+  optional int32  ans_type = 2;
+  optional uint32 ans_ttl = 3;
+  optional bytes  ans_data = 4;
+}
+
+message DnsRecordToES {
+  required bytes uuid = 1;
+  optional bytes quuid = 2;
+  optional uint32 query_time = 3;
+  optional uint32 src_addr = 4;
+  optional uint32 src_port = 5;
+  optional uint32 dst_addr = 6;
+  optional uint32 dst_port = 7;
+  optional bytes  query_url = 8;
+  optional uint32 count = 9;
+  repeated DnsAnswer answer = 10;
+};
+
+message DnsQuery {
+  required bytes guid = 1;
+  required bytes uuid = 2;
+  required bytes quuid = 3;
+  required uint32 time = 4;        // utc
+  required bytes url = 5;          // json -> query
+  optional uint32 proc_id = 6;
+  optional bytes proc_path = 7;
+  optional bytes proc_cmdline = 8;
+  optional bytes proc_md5 = 9;
+  optional uint32 count = 10;        // 新增加，agent 合并统计次数
+};
+
+//--------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------
+// 全量或增量上报系统账户信息
+//  subcmd = 0x01;  全量上报系统账户信息
+//  subcmd = 0x02; 	增量上报系统账户信息
+message UserAccountInfo {
+  enum AccountPrivilege {
+    SUPER_USER = 0;
+    NORMAL_USER = 1;
+  }
+
+  enum ModifiedType {
+    NOT_SET = 0;
+    NEW_CREATED = 1;        //上报新创建的账户
+    MODIFIED = 2;          //上报信息变化的账户
+    DELETED = 3;          //上报删除的账户
+    LAST_LOGIN_TIME_CHANGED = 4;  //最后登录时间变化时上报
+  }
+
+  message Account {
+    required bytes        user_name = 1;
+    required bytes        group_names = 2;
+    optional int64        create_time = 3 [default = 0];    //the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC
+    optional int64        last_login_time = 4 [default = 0];  //the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC
+    optional bytes        shell_path = 5 [default = ""];    //for linux
+    required bool          is_login_account = 6;    // true -> 登录账户
+    required bool          is_hidden_account = 7;  // true -> 隐藏账户
+    required bool          is_without_pwd = 8;    // true -> 无密码账户
+    required AccountPrivilege  privilege = 9;
+    optional ModifiedType    modify_type = 10 [default = NOT_SET];    // 增量上报时指明事件的类型, 全量上报可忽略
+  }
+
+  required bytes        bytes_guid = 1;
+  required bytes        bytes_uuid = 2;
+  optional bytes        bytes_quuid = 3 [default = ""];
+  repeated Account      account_list = 4;
+  required Platform      platform = 5;
+};
+
+//--------------------------------------------------------------------------------------------
+message AgentDumpDefine
+{
+  enum DumpReason //1.crash 2.cpu 3.mem
+  {
+    CRASH_DUMP = 1;
+    CPU_DUMP = 2;
+    MEM_DUMP = 3;
+  }
+  enum Platform //1.windows  2.linux
+  {
+    PLATFORM_WIN = 1;
+    PLATFORM_LINUX = 2;
+  }
+}
+
+//--------------------------------------------------------------------------------------------
+//监听端口信息上报协议  cmd_open_port_report = 0x19;
+message OpenPortMsg {
+  enum ReportType {
+    REPORT_ALL = 0;  //全量上报
+  }
+  message PortInfo {
+    required int32 port = 1;
+    required bytes process_name = 2;
+    required uint32 pid = 3;
+    optional uint64 key = 4;  //  high 32bit: port, low 32bit: pid
+    optional uint64 modify_timestamp = 5;
+  }
+
+  required bytes    bytes_uuid = 1;
+  optional bytes    bytes_guid = 2;
+  required ReportType report_type = 3 [default = REPORT_ALL];
+  repeated PortInfo  port_info_lst = 4;
+  optional bytes    bytes_quuid = 5;
+  optional bytes      push_result = 6;    //由push 触发的全量上报进程数据时，最后一页上报push result 序列化的数据
+}
+
+
+//--------------------------------------------------------------------------------------------
+// agent 上报进程信息, cmdid=0x20
+message ProcessInfoMsg {
+  enum ReportType {
+    REPORT_ALL = 0;  //全量上报
+    REPORT_MODIFIED = 1;
+  }
+
+  enum ModifiedType {
+    NOT_SET = 0;
+    NEW_PROCESS = 1;
+    DELETED_PROCESS = 2;
+  }
+
+  message Process {
+    required bytes process_name = 1;
+    required bytes full_path = 2;
+    required uint32 pid = 3;
+    required uint32 ppid = 4;
+    required bytes cmd_line = 5;   // maxlen: 1024
+    required bytes user_name = 6;
+    optional uint32 sid = 7;  // for linux
+    optional uint32 uid = 8;  // for linux
+    optional uint32 gid = 9;  // for linux
+    optional uint32 euid = 10; // for linux
+    optional uint32 egid = 11; // for linux
+    required ModifiedType modify_type = 12;
+    optional bytes md5 = 13;
+    optional double cpu = 14;
+    optional uint32 mem = 15; // in KB
+  }
+
+  required bytes    bytes_uuid = 1;
+  optional bytes    bytes_guid = 2;
+  repeated Process    process_list = 3;
+  required ReportType report_type = 4;
+  required uint32  current_page = 5;   //分页上报，当前第几页.  第一页为 1
+  required uint32    total_page = 6;    //分页上报，总共有多少页
+  required Platform  platform = 7;
+  optional bytes      push_result = 8;    //由push 触发的全量上报进程数据时，最后一页上报push result 序列化的数据
+  optional bytes    bytes_quuid = 9;
+}
+
+//用户自定义配置
+message UserDefConfig {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_quuid = 2;
+  required uint32 local_config_version = 3;   // unix time stamp as version
+  optional Platform platform = 4;
+  optional uint32 latest_version = 5;
+  optional bytes bytes_config = 6;
+}
+
+// agent 上报的cpu， 内存等监控信息
+message AgentMonitorReport {
+  enum MonitorId {
+    CPU = 1;
+    Memory = 2;
+    SelfProcNum = 3;
+    YDSpaceUsed = 4;
+  }
+
+  enum MonitorProcess {
+    YDLive = 1;
+    YDService = 2;
+  }
+  message MonitorData {
+    required MonitorId monitor_id = 1;
+    required uint32 value = 2;
+    required int64 monitor_time = 3;  // unix time stamp
+  }
+  required bytes bytes_uuid = 1;
+  repeated MonitorData monitor_values = 2;
+  required Platform platform = 3;
+  required MonitorProcess monitor_process = 4;
+  optional uint32 procss_id = 5;
+  optional bytes byte_ver = 6;
+  optional uint32 kernel_num = 7;
+  optional uint32 total_mem = 8;
+}
+
+
+//user history 上报
+message UserCommandReport {
+  message CommandElement {
+    required int64 timestamp = 1; //unix timestamp
+    required bytes commad = 2;
+  }
+
+  required bytes user_name = 1;
+  required bytes bytes_uuid = 2;
+  repeated CommandElement command_list = 3;
+  required Platform platform = 4;
+  optional bytes bytes_quuid = 5;
+}
+
+
+//本地提权
+message ProcPrivilegeEscalation {
+
+  message ProcPrivilegeInfo {
+    required bytes process_name = 1;              //进程名
+    required bytes full_path = 2;                 //进程全路径
+    required uint32 pid = 3;                      //pid
+    required bytes cmd_line = 4;                  // maxlen: 1024
+    required bytes user_name = 5;                 //用户名
+    required bytes user_group_name = 6;           //用户组名
+    required bytes proc_file_privilege = 7;       //提权进程
+
+    required uint32 ppid = 8;                     //ppid
+    required bytes parent_proc_name = 9;          //父进程名
+    required bytes parent_proc_user_name = 10;    //父进用户
+    required bytes parent_proc_group_name = 11;   //父进程用户组
+    required bytes parent_proc_path = 12;         //父进程路径
+
+    required uint64 find_time = 13;               //发现时间
+    repeated bytes proc_tree = 14;                //进程树
+
+    optional uint32 sid = 15;
+    optional uint32 uid = 16;
+    optional uint32 gid = 17;
+    optional uint32 euid = 18;
+    optional uint32 egid = 19;
+  }
+
+  required bytes bytes_uuid = 1;
+  required bytes bytes_quuid = 2;
+  repeated ProcPrivilegeInfo privilege_list = 3;
+}
+
+//反弹shell
+message ReverseShell {
+  message ReverseShellInfo {
+    required bytes process_name = 1;            //进程名
+    required bytes full_path = 2;               //进程全路径
+    required uint32 pid = 3;                    //pid
+    required bytes cmd_line = 4;                // maxlen: 1024
+    required bytes user_name = 5;               //用户名
+    required bytes user_group_name = 6;         //用户组名
+    required uint32 ppid = 7;                   //ppid
+    required bytes parent_proc_name = 8;        //父进程名
+    required bytes parent_proc_user_name = 9;   //父进程用户名
+    required bytes parent_proc_group_name = 10; //父进程用户组
+    required bytes parent_proc_path = 11;       //父进程路径
+    required uint64 find_time = 12;             //发现时间
+    repeated bytes proc_tree = 13;              //进程数
+    required bytes dst_ip = 14;                 //源IP
+    required uint32 dst_port = 15;              //源端口
+  }
+  required bytes bytes_uuid = 1;
+  required bytes bytes_quuid = 2;
+  repeated ReverseShellInfo reverse_shell_list = 3;
+}
+
+//----------------  cert proto -------------------------------
+// -- step 1: init before install cert
+message SqCertInitReq {
+  required bytes uuid = 1;
+  required bytes tid = 2;
+}
+
+message SqCertInitRsp {
+  required bytes uuid = 1;
+  required bytes tid = 2;
+  required bytes cert_uid = 3;          //as param for SqApplyCert
+  required bytes rep_content = 4;  //base64 encoded. used by agent sdk
+}
+// -- step 2: install cert
+message SqApplyCertReq {
+  required bytes uuid = 1;
+  required bytes tid = 2;             // from SqCertInitRsp
+  required bytes cert_uid = 3;         // from SqCertInitRsp
+  required bytes cert_request = 4;    // generated by sdk
+  required bytes cert_cid = 5;        // generated by sdk
+}
+
+message SqApplyCertRsp {
+  required bytes uuid = 1;
+  required bytes cert_sign = 2;   // to install cert by sdk
+  required int64 cert_status = 3;
+}
+
+message SqVerifySignMsgReq {
+  required bytes uuid = 1;
+  required bytes signed_msg = 2;
+}
+
+//---------------- end of  cert proto -------------------------------
+
+//--------------------------------------------------------------------------------------------
+// agent register report, cmdid=0x30
+
+enum YmonOper
+{
+  YMON_REG_DELETE_KEY = 256;  // sub_cmd_ymon_reg
+  YMON_REG_SET_VALUE_KEY = 257;
+  YMON_REG_DELETE_VALUE_KEY = 258;
+  YMON_REG_SET_INFORMATION_KEY = 259;
+  YMON_REG_RENAME_KEY = 260;
+  YMON_REG_ENUMERATE_KEY = 261;
+  YMON_REG_ENUMERATE_VALUE_KEY = 262;
+  YMON_REG_QUERY_KEY = 263;
+  YMON_REG_QUERY_VALUE_KEY = 264;
+  YMON_REG_QUERY_MULTIPLE_VALUE_KEY = 265;
+  YMON_REG_CREATE_KEY = 266;
+  YMON_REG_OPEN_KEY = 267;
+  YMON_REG_HANDLE_CLOSE = 268;
+  YMON_REG_CREATE_KEY_EX = 269;
+  YMON_REG_OPEN_KEY_EX = 270;
+  YMON_REG_FLUSH_KEY = 271;
+  YMON_REG_LOAD_KEY = 272;
+  YMON_REG_UNLOAD_KEY = 273;
+  YMON_REG_QUERY_KEY_SECURITY = 274;
+  YMON_REG_SET_KEY_SECURITY = 275;
+  YMON_REG_RESTORE_KEY = 276;
+  YMON_REG_SAVE_KEY = 277;
+  YMON_REG_REPLACE_KEY = 278;
+  YMON_REG_QUERY_KEY_NAME = 279;
+};
+
+message YmonMsg
+{
+  message YmonMsgReg
+  {
+    required uint64 seq = 1;
+    required uint64 timestamp = 2;
+    required uint32 pid = 3;
+    required YmonOper oper = 4;
+    required uint32 result = 5;
+    required bytes regname = 6;
+    optional bytes valname = 7;
+    optional bytes data = 8;
+  };
+
+  required bytes uuid = 1;
+  required bytes quuid = 2;
+  repeated YmonMsgReg regs = 3;
+  optional bytes guid = 4;
+};
+
+/*
+100001 删除键   YMON_REG_DELETE_KEY
+100002 设置键    YMON_REG_LOAD_KEY|YMON_REG_RESTORE_KEY|YMON_REG_REPLACE_KEY
+100003 创建键   YMON_REG_CREATE_KEY|YMON_REG_CREATE_KEY_EX
+100004 键重命名  YMON_REG_RENAME_KEY
+100005 设置键安全属性 YMON_REG_SET_KEY_SECURITY
+
+200001 删除键值  YMON_REG_DELETE_VALUE_KEY
+200002 设置键值  YMON_REG_SET_VALUE_KEY
+200007 创建键值
+*/
+
+enum RegistryOperate
+{
+  Registry_None = 0;
+  Registry_Del_Key = 100001;
+  Registry_Set_Key = 100002;
+  Registry_Create_Key = 100003;
+  Registry_Rename_Key = 100004;
+  Registry_Set_Key_Security = 100005;
+
+  Registry_Del_Key_Value = 200001;
+  Registry_Set_Key_Value = 200002;
+}
+
+message AgentCrashReport {
+  enum CrashType {
+    CPU_High = 1;
+    Memory_High = 2;
+    Mem_Crash = 3;
+  }
+
+  enum CrashProcess {
+    YDLive = 1;
+    YDService = 2;
+  }
+
+  required bytes bytes_uuid = 1;
+  required CrashType crash_type = 2;
+  required Platform platform = 3;
+  required CrashProcess crash_process = 4;
+  optional uint32 procss_id = 5;
+  optional bytes byte_ver = 6;
+  optional uint32 kernel_num = 7;
+}
+
+// for http
+message MalwareScanStatus {
+  required bytes uuid = 1;
+  required bytes guid = 2;
+  required bytes quuid = 3;
+  required uint32 status_type = 4;   // 1- start scan,   2 - scan finished
+  optional uint64 scan_time = 5;     // unix time type为1是start time; 2是endtime
+  optional uint64 file_count = 6;    // scan file total count
+}
+
+
+message FileCheckRequest {
+  required bytes bytes_guid = 1;                    //GUID
+  required bytes bytes_uuid = 2;                    //UUID
+  required bytes bytes_file_path = 3;               //文件路径
+}
+
+message FileCheckResponse {
+  required bytes bytes_guid = 1;                    //GUID
+  required bytes bytes_uuid = 2;                    //UUID
+  required bytes bytes_file_path = 3;               //文件路径
+  required int32 int32_exists = 4;                  //是否存在
+  required int64 int64_file_size = 5;               //文件大小
+};
+
+
+message WebServerInfo {
+  enum ServerType {
+    undef = 0;
+    nginx = 1;
+    apache = 2;
+    tomcat = 3;
+  }
+  message Server {
+    required ServerType type = 1;
+    required bytes      root_conf = 2;
+    repeated bytes      path_list = 3;
+  }
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  repeated Server server_list = 4;
+};
+
+message CrontabMsg {
+  message Crontab {
+    required bytes      user = 1;
+    required bytes      path = 2;
+    required bytes    content = 3;
+  }
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  repeated Crontab crontab_list = 4;
+}
+
+//--------------------------------------------------------------------------------------------
+//网站防篡改  cmd_tamper_protect = 0x50;
+// 防护状态
+enum TamperProtectStatus {
+  TP_STATUS_UNSTARTED = 0;  //未开启
+  TP_STATUS_STARTING = 1;  //启动中
+  TP_STATUS_STARTED = 2;  //已启动
+  TP_STATUS_STOPPING = 3;  //关闭中
+  TP_STATUS_STOPPED = 4;  //已关闭
+  TP_STATUS_LICENSE_EXPIRED = 5;  //授权到期
+}
+// 防护异常类型
+enum TamperProtectException {
+  TP_EXP_NONE = 0;  //无异常
+  TP_EXP_LIMIT_EXCEEDED = 1;  //超出限制
+  TP_EXP_LIMIT_EXCEEDED_NOT_A_DIRECTORY = 11; //超出限制，监控路径不是一个目录
+  TP_EXP_LIMIT_EXCEEDED_NOT_SUPPORT_FILE_TYPE = 12; //超出限制，文件类型不支持
+  TP_EXP_LIMIT_EXCEEDED_TOO_DEEP_DIR = 13; //超出限制，目录深度超过限制
+  TP_EXP_LIMIT_EXCEEDED_TOO_MANY_FILES = 14; //超出限制，文件数量超出限制
+  TP_EXP_LIMIT_EXCEEDED_PATH_TOO_LONG = 15; //超出限制，路径太长
+  TP_EXP_LIMIT_EXCEEDED_FILE_TOO_BIG = 16; //超出限制，文件太大
+  TP_EXP_LIMIT_EXCEEDED_FILE_READ_FAILED = 17; //超出限制，文件读取失败
+  TP_EXP_AGENT_OFFLINE = 2; //agent离线，后台使用
+  TP_EXP_TIMEOUT = 3; //超时，后台使用
+  TP_EXP_DISK_INSUFFICIENT = 4;  //磁盘不足
+  TP_EXP_MACHINE_DESTROYED = 5;  //机器已销毁，后台使用
+  TP_EXP_FILE_MODIFIED = 6; //文件备份时发生变化（相对StartResponse）
+  TP_EXP_MISC = 99;  //其他
+}
+// 文件类型
+enum TamperProtectFileType {
+  TP_FILE_REGULAR = 0;  //常规文件
+  TP_FILE_DIR = 1;  //目录
+  TP_FILE_SOFT_LINK = 2;  //软链
+}
+// 恢复类型
+enum TamperProtectRecoverType {
+  TP_RECOVER_CONTENT_RECOVER = 0;  //内容被修改恢复
+  TP_RECOVER_PERMISSIONS_RECOVER = 1;  //权限被修改恢复
+  TP_RECOVER_OWNERSHIP_RECOVER = 2;  //归属被修改恢复
+  TP_RECOVER_DELETED_RECOVER = 3;  //被删除恢复
+  TP_RECOVER_NEW_DELETE = 4;  //新增删除
+}
+// 文件信息
+message TamperProtectFileInfo {
+  required bytes pathmd5 = 1;  //文件路径MD5
+  required bytes path = 2;  //文件路径
+  required bytes md5 = 3;  //文件MD5，目录取值空字符串
+  required bytes permissions = 4;  //文件权限
+  required bytes ownership = 5;  //文件归属
+  required TamperProtectFileType file_type = 6;  //文件类型
+}
+// 防篡改用户配置
+message TamperProtectConfigRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;  //配置标识
+  required bytes bytes_protect_path = 5;  //需要防护的根目录
+  repeated bytes file_types_white = 6;  //防护文件类型
+  required TamperProtectStatus status = 7;  //防护状态
+  required uint32 auto_recover = 8;  //文件被篡改自动恢复开关：0-未开启；1-已启动；客户端发现该自动从0变为1时要上报一次TamperProtectReportFilesRequest
+  required uint32 max_files_number=9;  //总文件（包括普通文件、文件夹和软链）个数最大值
+  required uint32 max_file_size=10;  //单文件体积最大值，单位byte
+  required uint32 max_file_path_len=11;  //最大相对路径长度
+};
+message TamperProtectConfigResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+};
+// 防篡改启动
+message TamperProtectStartRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+};
+message TamperProtectStartResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required TamperProtectException exception = 5;  //异常
+  required bytes exception_message = 6;  //异常提示
+  repeated TamperProtectFileInfo files = 7;  //待监控文件信息列表
+};
+// 下发待备份文件列表
+message TamperProtectBackupFilesRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  repeated TamperProtectFileInfo files = 5;  //待备份文件信息列表
+};
+message TamperProtectBackupFilesResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+};
+// 上传文件
+message TamperProtectUpFileRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required TamperProtectFileInfo file_info = 5;  //文件信息，覆盖TamperProtectStartResponse
+  required bytes bytes_file_content = 6;  //文件内容
+  required TamperProtectException exception = 7;  //异常
+  required bytes exception_message = 8;  //异常提示
+};
+message TamperProtectUpFileResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required bytes pathmd5 = 5;  //文件路径MD5
+};
+// 上报文件信息
+message TamperProtectReportFilesRequest {
+  // 文件上报类型
+  enum TamperProtectFileReportType {
+    TP_REPORT_TYPE_FULL = 0;  //全量上报
+    TP_REPORT_TYPE_MONITOR = 1;  //实时监控，仅上报变更的
+  }
+  // 文件被修改类型
+  enum TamperProtectFileChangeType {
+    TP_CHANGE_MODIFY = 0;  //被修改（内容/权限/归属）
+    TP_CHANGE_DELETE = 1;  //被删除
+    TP_CHANGE_NEW = 2;  //新增文件
+  }
+  message FileToBeCompared {
+    required TamperProtectFileInfo file_info = 1;  //待比较文件信息
+    optional TamperProtectFileChangeType type = 2;  //文件被修改类型，仅在report_type为1时赋值
+  }
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  repeated FileToBeCompared files_info = 5;  //待比对文件信息列表
+  required TamperProtectFileReportType report_type = 6;
+};
+
+message TamperProtectReportFilesResponse {
+  message FileToBeRecovered {
+    required TamperProtectFileInfo file_info = 1;  //待恢复文件信息
+    required TamperProtectRecoverType type = 2;  //恢复类型
+  }
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  repeated FileToBeRecovered recover_files = 5;  //待恢复文件列表
+};
+// 下载文件
+message TamperProtectDownFileRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required bytes pathmd5 = 5;  //文件路径MD5
+};
+message TamperProtectDownFileResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required TamperProtectFileInfo file_info = 5;  //文件信息
+  required bytes bytes_file_content = 6;  //文件内容
+};
+// 恢复文件结果上报
+message TamperProtectRecoverResultRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required bytes pathmd5 = 5;  //文件路径MD5
+  required bytes path = 6;  //文件路径
+  required bytes md5_modified = 7;  //被篡改后的文件MD5，目录取值空字符串
+  required bytes md5 = 8;  //恢复后的文件MD5，目录取值空字符串
+  required TamperProtectRecoverType type = 9;  //恢复类型
+  required TamperProtectException exception = 10;  //异常
+  required bytes exception_message = 11;  //异常提示
+};
+message TamperProtectRecoverResultResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+  required bytes pathmd5 = 5;  //文件路径MD5
+};
+// 防篡改关闭
+message TamperProtectStopRequest {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+};
+message TamperProtectStopResponse {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_guid = 2;
+  required bytes bytes_quuid = 3;
+  required uint64 config_id = 4;
+};
+
+//EDR数据通用消息，具体的采集数据是一个JSON
+message FastMsg {
+  enum MsgType {
+    NOT_SET = 0;
+    JSON = 1;
+    TEXT = 2;
+    GZIP = 3;
+  }
+  required bytes    bytes_uuid = 1;
+  required bytes    bytes_quuid = 2;
+  required MsgType    msg_type = 3 [default = JSON];
+  required uint32     msg_id = 4;
+  required uint32     version = 5;
+  optional bytes      result = 6;
+};
+
+//--------------------------------------------------------------------------------------------
+//新版漏扫（青藤） cmd_vulner_detect = 0x60;
+// 异常
+enum VulnerDetectException {
+  VD_EXP_SUCCESS = 0;  // 成功
+  VD_EXP_INFO = 1;  // 传递信息或过程日志
+  VD_EXP_ALREADY_EXISTS = 2;  // 任务已存在
+  VD_EXP_TOO_MANY_TASKS = 3;  // 待执行的任务过多
+  VD_EXP_INVALID_CONFIG = 4; // 无效配置
+  VD_EXP_DOWNLOAD_FAILED = 5;  // 下载失败
+  VD_EXP_UNZIP_FAILED = 6;  // 解压失败
+  VD_EXP_BIN_PATH_NOT_EXISTS = 7; // 可执行路径不存在
+  VD_EXP_BIN_PATH_CHMOD_FAILED = 8; // 可执行文件 chmod 失败
+  VD_EXP_CREATE_PROCESS_FAILED = 9;  // 创建进程失败
+  VD_EXP_PROCESS_EXIT_UNEXPECTED = 10; // 进程异常退出
+  VD_EXP_CPU_EXCEED_LIMIT = 11; // CPU 超限
+  VD_EXP_MEM_EXCEED_LIMIT = 12; // 内存 超限
+  VD_EXP_TIMEOUT = 13; // 执行超时
+  VD_EXP_NO_RESULT = 14; // 无结果文件
+  VD_EXP_RESULT_EMPTY = 15; // 结果文件为空
+  VD_EXP_RESULT_TOO_BIG = 16; // 结果文件太大
+  VD_EXP_SEND_TO_AGENT_ERR = 99; // 任务下发失败
+};
+// 下发扫描请求
+message VulnerDetectRequest {
+  message CompInfo {
+    required bytes remote = 1;
+    required bytes md5 = 2;
+    required bytes name = 3;
+    required bytes version = 4;
+  }
+  required bytes      bytes_uuid = 1;
+  required bytes      bytes_guid = 2;
+  required bytes      bytes_quuid = 3;
+  required bytes      root = 4;		// 生成至 /usr/local/qcloud/YunJing/ 下的目录名
+  required bytes      bin_path = 5;  // 相对 root 目录的可执行文件路径
+  required bytes      cmdline = 6;	// 传给 bin_path 的二进制参数
+  required uint32     timeout = 7;	// 超时时间
+  repeated CompInfo   comp_info_list = 8;	// 组件列表
+  required uint64     task_id = 9;	// 任务id
+  optional uint32     mem_limit = 10;   //内存限制值(M)
+};
+// 下发扫描响应（用于重试确认）
+message VulnerDetectResponse {
+  required bytes      bytes_uuid = 1;
+  required bytes      bytes_guid = 2;
+  required bytes      bytes_quuid = 3;
+  required uint64     task_id = 4;	// 任务id
+};
+// 上报扫描结果
+message VulnerDetectMessage {
+  required bytes      bytes_uuid = 1;
+  required bytes      bytes_guid = 2;
+  required bytes      bytes_quuid = 3;
+  required uint64     status = 4;    // 0: 成功,  > 0： 表示具体的错误码
+  required bytes      exception_message=5;  // 异常提示
+  required uint64     start_time = 6;
+  required uint64     stop_time = 7;
+  required bytes      result_content = 8;	// 任务执行数据，实际读取 task_result 文件
+  required bytes      stat_content = 9;		// 任务统计(质量)数据，实际读取 task_stat 文件
+  required uint64     task_id = 10;	// 任务id
+};
+//0x04终止扫描请求
+message VulnerDetectStopRequest {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+};
+//0x05终止扫描结果响应
+message VulnerDetectStopResponse {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+  required VulnerDetectException exception=5;  //异常，为0（无异常）表示正常终止
+  required bytes      exception_message=6;  //异常提示
+};
+
+
+//--------------------------------------------------------------------------------------------
+//新版基线 cmd_vulner_detect = 0x61; 协议结构和0x60一致
+// 异常
+enum BaselineDetectException {
+  BL_EXP_SUCCESS = 0;  // 成功
+  BL_EXP_INFO = 1;  // 传递信息或过程日志
+  BL_EXP_ALREADY_EXISTS = 2;  // 任务已存在
+  BL_EXP_TOO_MANY_TASKS = 3;  // 待执行的任务过多
+  BL_EXP_INVALID_CONFIG = 4; // 无效配置
+  BL_EXP_DOWNLOAD_FAILED = 5;  // 下载失败
+  BL_EXP_UNZIP_FAILED = 6;  // 解压失败
+  BL_EXP_BIN_PATH_NOT_EXISTS = 7; // 可执行路径不存在
+  BL_EXP_BIN_PATH_CHMOD_FAILED = 8; // 可执行文件 chmod 失败
+  BL_EXP_CREATE_PROCESS_FAILED = 9;  // 创建进程失败
+  BL_EXP_PROCESS_EXIT_UNEXPECTED = 10; // 进程异常退出
+  BL_EXP_CPU_EXCEED_LIMIT = 11; // CPU 超限
+  BL_EXP_MEM_EXCEED_LIMIT = 12; // 内存 超限
+  BL_EXP_TIMEOUT = 13; // 执行超时
+  BL_EXP_NO_RESULT = 14; // 无结果文件
+  BL_EXP_RESULT_EMPTY = 15; // 结果文件为空
+  BL_EXP_RESULT_TOO_BIG = 16; // 结果文件太大
+  BL_EXP_SEND_TO_AGENT_ERR = 99; // 任务下发失败
+};
+// 下发扫描请求
+message BaselineDetectRequest {
+  message CompInfo {
+    required bytes remote = 1;
+    required bytes md5 = 2;
+    required bytes name = 3;
+    required bytes version = 4;
+  }
+  required bytes      bytes_uuid = 1;
+  required bytes      bytes_guid = 2;
+  required bytes      bytes_quuid = 3;
+  required bytes      root = 4;		// 生成至 /usr/local/qcloud/YunJing/ 下的目录名
+  required bytes      bin_path = 5;  // 相对 root 目录的可执行文件路径
+  required bytes      cmdline = 6;	// 传给 bin_path 的二进制参数
+  required uint32     timeout = 7;	// 超时时间
+  repeated CompInfo   comp_info_list = 8;	// 组件列表
+  required uint64     task_id = 9;	// 任务id
+};
+
+// 下发扫描响应（用于重试确认）
+message BaselineDetectResponse {
+  required bytes      bytes_uuid = 1;
+  required bytes      bytes_guid = 2;
+  required bytes      bytes_quuid = 3;
+  required uint64     task_id = 4;	// 任务id
+};
+
+// 上报扫描结果
+message BaselineDetectMessage {
+  required bytes      bytes_uuid = 1;
+  required bytes      bytes_guid = 2;
+  required bytes      bytes_quuid = 3;
+  required uint64     status = 4;    // 0: 成功,  > 0： 表示具体的错误码
+  required bytes      exception_message=5;  // 异常提示
+  required uint64     start_time = 6;
+  required uint64     stop_time = 7;
+  required bytes      result_content = 8;	// 任务执行数据，实际读取 task_result 文件
+  required bytes      stat_content = 9;		// 任务统计(质量)数据，实际读取 task_stat 文件
+  required uint64     task_id = 10;		    // 任务id
+};
+
+//--------------------------------------------------------------------------------------------
+//木马 cmd_malware = 0x70;
+// 异常 //todo翼展修改补充
+enum MalwareScanException {
+  MS_EXP_SUCCESS = 0;  // 成功
+  MS_EXP_INFO = 1;  // 传递信息或过程日志
+  MS_EXP_ALREADY_EXISTS = 2;  // 任务已存在
+  MS_EXP_TOO_MANY_TASKS = 3;  // 待执行的任务过多
+  MS_EXP_TIMEOUT = 4; // 执行超时
+  MS_EXP_DOES_NOT_EXISTS = 5; // 任务不存在
+  MS_EXP_TASK_IS_STOPPED = 6; // 任务被中断
+  MS_EXP_SEND_TO_AGENT_ERR = 99; // 任务下发失败
+}
+// 扫描模式enum
+enum MalwareScanType {
+  MS_TYPE_FULL = 0;  //全盘扫描
+  MS_TYPE_PART = 1;  //快速扫描
+}
+// 监控模式enum
+enum MalwareMonitorType {
+  MS_TYPE_STANDARD = 0;  //标准模式
+  MS_TYPE_DEEP = 1;  //深度模式
+}
+//包含目录和排除目录（扫描或监控）
+message MalwarePathes {
+  repeated bytes      include_pathes_linux=1;  //Linux包含目录列表
+  repeated bytes      exclude_pathes_linux=2;  //Linux排除目录列表
+  repeated bytes      include_pathes_win=3;  //Windows包含目录列表
+  repeated bytes      exclude_pathes_win=4;  //Windows排除目录列表
+};
+//0x01扫描请求
+message MalwareScanRequest {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+  required MalwareScanType type=5;  //扫描模式
+  required MalwarePathes     pathes=6;  //监控目录和忽略目录
+  required uint32     timeout=7;  //最大扫描时间，单位秒
+  optional uint32     report_interval=8;  //扫描文件上报间隔，单位毫秒
+};
+//0x02确认收到扫描请求
+message MalwareScanAck {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+};
+//0x03扫描结果响应
+message MalwareScanResponse {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+  required MalwareScanException exception=5;  //异常，为0（无异常）表示扫描结束
+  required bytes      exception_message=6;  //异常提示
+  optional uint32     used_time_s=7; // 扫描任务总耗时，单位秒
+  optional uint32     fast_used_time_s=8; // 快速扫描总耗时，单位秒
+  optional MalwareScanException fast_exception=9;  //异常，为0（无异常）表示扫描结束，用于快速扫描
+  optional bytes      fast_exception_message=10;  //异常提示，用于快速扫描
+};
+//0x04终止扫描请求
+message MalwareScanStopRequest {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+};
+//0x05终止扫描结果响应
+message MalwareScanStopResponse {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required uint64     task_id=4;  //任务id
+  required MalwareScanException exception=5;  //异常，为0（无异常）表示正常终止
+  required bytes      exception_message=6;  //异常提示
+};
+//0x06通知客户端变更监控请求
+message MalwareMonitorPushRequest {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required bool      enable_monitor=4;  //是否开启实时监控
+  required MalwareMonitorType type=5;  //监控模式
+  required MalwarePathes     pathes=6;  //监控目录和忽略目录
+};
+//0x07通知客户端变更监控响应
+message MalwareMonitorPushResponse {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+};
+//0x08客户端拉取监控配置请求
+message MalwareMonitorPullRequest {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+};
+//0x09客户端拉取监控配置响应
+message MalwareMonitorPullResponse {
+  required bytes      bytes_uuid=1;
+  required bytes      bytes_guid=2;
+  required bytes      bytes_quuid=3;
+  required bool      enable_monitor=4;  //是否开启实时监控
+  required MalwareMonitorType type=5;  //监控模式
+  required MalwarePathes     pathes=6;  //监控目录和忽略目录
+};
+
+
+
+//--------------------------------------------------------------------------------------------
+// 容器木马 cmd = 0x71;
+
+// 任务下发
+message TcsTaskComm {
+  required bytes bytes_uuid = 1;
+  required bytes bytes_quuid = 2;
+  required bytes taskid = 3;
+}
+
+// s->c 服务端发起镜像扫描任务
+message TcsScanImage {
+  required TcsTaskComm comm = 1;
+  required bytes imageid = 2;
+  optional uint32 timeout = 3; // scan timeout seconds
+  repeated bytes excludes = 4; // exclude path
+  optional uint32 interval = 5; // 扫描文件间隔(默认100，单位ms)
+};
+
+// s->c 取消扫描任务
+message TcsScanImageCancel {
+  required TcsTaskComm comm = 1;
+};
+
+// c->s 客户端接收扫描任务成功，发送ack
+message TcsScanImageAck {
+  enum TcsStatus {
+    NotFound = 1;           // 不存在
+    Scanning = 2;           // 扫描中
+    Finish = 3;             // 扫描完成
+    Timeout = 4;            // 任务超时
+    TooManyScanTask = 5;    // 任务过多
+    Failed = 6;             // 扫描失败
+    Canceled = 7;           // 取消
+  }
+  required TcsTaskComm comm = 1;
+  required TcsStatus ack = 2;
+  optional bytes message = 3;
+}
+
+// c->s 客户端上报文件hash
+message TcsReportHashs {
+  message TcsHash {
+    required bytes md5 = 1;
+    required bytes path = 2;
+    required int32 size = 3;
+    required uint32 mtime = 4;
+  }
+  required TcsTaskComm comm = 1;
+  required uint32 report_id = 2;
+  repeated TcsHash files = 3;
+}
+
+// s->c 上报完成服务端确认ack
+message TcsReportHashsAck {
+  required TcsTaskComm comm = 1;
+  required uint32 report_id = 2;
+  repeated string require_content_paths = 3; // 需要上报内容的路径列表
+}
+
+// c->s 客户端上报文件内容
+message TcsReportFiles {
+  message TcsFile {
+    required bytes md5 = 1;
+    required bytes path = 2;
+    required bytes content = 3;
+  }
+  required TcsTaskComm comm = 1;
+  required uint32 report_id = 2;
+  repeated TcsFile files = 3;
+}
+
+// s->c 上报文件成功，服务端确认ack
+message TcsReportFilesAck {
+  required TcsTaskComm comm = 1;
+  required uint32 report_id = 2;
+}
+
+
+
+//--------------------------------------------------------------------------------------------
+// 容器运行时 cmd = 0x72;
+
+// c->s agent查询策略
+// agent启动时: 查询主机所有imageid
+// 主机新镜像pulled: 查询新增imageid策略
+message TcsImageQueryPolicy {
+   repeated bytes imageids = 1;
+   required uint32 query_id = 2;
+};
+
+enum TcsMonitorMode {
+   TcsMonitorSilent = 1;        // 静默模式
+   TcsMonitorAlert = 2;         // 告警模式
+   TcsMonitorBlock = 3;         // 拦截模式
+}
+
+enum TcsAction {
+   TcsAllow       = 1;  // 放行
+   TcsDeny        = 2;  // 拦截
+   TcsAlert       = 3;  // 告警
+}
+
+message TcsProcmonRule {
+   required string id = 1;
+   required string process = 2;        // 进程
+   required TcsAction action = 3;      // 执行动作
+}
+message TcsFilemonRule {
+   required string id = 1;
+   optional string process = 2;      // 源程序路径规则
+   optional string target = 3;       // 被修改目标文件路径规则
+   required TcsAction action = 4;    // 执行动作
+}
+
+message TcsImagePolicy {
+   repeated string         imageids = 1;                   // 镜像id
+   required bool           deny_execve = 2;                // 禁止镜像执行
+   // 提权相关配置
+   required bool           escape_file_isolate = 3;        // 文件修改逃逸: 容器内进程修改容器外文件(未挂载进容器)
+   required bool           escape_syscall = 4;             // syscall逃逸: 容器内进程调用容器白名单以外的syscall
+   required bool           escape_mount_namespace = 5;     // 容器内进程突破文件系统隔离
+   required bool           escape_priv_promote = 6;        // 容器内进程提权
+   required uint64         escape_priv_container = 7;      // 特权容器(权限列表)
+   repeated string         escape_mount_risk_paths = 8;    // 挂载宿主机敏感目录|挂载docker.sock进容器
+   // syscall监控
+   repeated string         syscallmon_rules = 9;           // syscall黑名单
+   optional TcsMonitorMode syscallmon_mode = 10;           // syscall监控模式
+   optional string         syscallmon_rule_id = 11;        // 进程规则组id(后端用)
+   // 进程监控
+   repeated TcsProcmonRule procmon_rules = 12;
+   optional string         procmon_group_id = 13;           // 进程规则组id(后端用)
+   // 文件监控(仅监控修改)
+   repeated TcsFilemonRule filemon_rules = 14;
+   optional string         filemon_group_id = 15;           // 文件规则组id(后端用)
+   optional bool           default = 16;                    // 默认策略
+};
+
+// s->c server镜像策略响应
+message TcsImageQueryPolicyACK {
+   required uint32 query_id = 1;
+   repeated TcsImagePolicy policys = 2;
+};
+
+message TcsImagePolicyNotify {
+   required TcsTaskComm comm = 1;
+   repeated bytes imageids = 2;
+}
+
+message TcsImagePolicyNotifyACK {
+   required TcsTaskComm comm = 1;
+}
+
+enum TcsAlertType {
+   option allow_alias = true;
+   // 保留 1~100
+   TcsAlertReserve = 100;
+
+   // 镜像相关 101~200
+   TcsAlertImageMIN = 101;
+   TcsAlertImageDeny = 101;               // 高危镜像拦截
+   TcsAlertImageMAX = 200;
+
+   // 逃逸相关 201~300
+   TcsAlertEscapeMIN = 201;
+   TcsAlertEscapeFileIsolate = 201;       // 文件修改逃逸: 容器内进程修改容器外文件(未挂载进容器)
+   TcsAlertEscapeSyscall = 202;           // syscall逃逸: 容器内进程调用容器白名单以外的syscall
+   TcsAlertEscapeMountNS = 203;           // 容器内进程突破文件系统隔离
+   TcsAlertEscapePrivPromote = 204;       // 容器内进程提权
+   TcsAlertEscapePrivContainer = 205;     // 特权容器(权限列表)
+   TcsAlertEscapeMountRiskPath = 206;     // 挂载宿主机敏感目录|挂载docker.sock进容器
+   TcsAlertEscapeMAX = 300;
+
+   // syscall监控 301~400
+   TcsAlertSyscallMIN = 301;
+   TcsAlertRiskSyscall = 301;             // 高危syscall监控告警
+   TcsAlertSyscallMAX = 400;
+
+   // 文件监控    401~500
+   TcsAlertFilemonMIN = 401;
+   TcsAlertFileAccess = 401;              // 文件访问控制告警
+   TcsAlertBlockFileAccess = 402;         // 文件访问控制拦截
+   TcsAlertFilemonMAX = 500;
+
+
+   // 进程黑白名单501~600
+   TcsAlertProcmonMIN = 501;
+   TcsAlertRiskProc = 501;                // 进程黑白名单告警
+   TcsAlertBlockRiskProc = 502;           // 进程黑白名单拦截
+   TcsAlertProcmonMAX = 600;
+}
+
+//---------------------------容器木马扫描----------------------------------
+// s->c 发起扫描任务
+message TcsScanContainer
+{
+   required TcsTaskComm comm = 1;
+   repeated bytes containerids = 2; // 容器id 为空时扫描所有容器
+   optional uint32 timeout = 3;     // scan timeout seconds
+   repeated bytes excludes = 4;     // exclude path(容器内扫描目录, 支持通配符)
+   repeated bytes includes = 5;     // include path(容器内扫描目录， 支持通配符)
+   optional uint32 interval = 6;    // 扫描文件间隔(默认100，单位ms)
+};
+
+// s->c 取消扫描任务
+message TcsScanContainerCancel
+{
+   required TcsTaskComm comm = 1;
+   repeated bytes containerid = 2; // 停止容器(containerid 不为空)或任务(containerid 为空)
+};
+
+// c->s agent收到扫描任务ack确认
+message TcsScanContainerAck
+{
+   enum TcsStatus
+   {
+      NotFound = 1;        // 不存在
+      Scanning = 2;        // 扫描中
+      Finish = 3;          // 扫描完成
+      Timeout = 4;         // 任务超时
+      TooManyScanTask = 5; // 任务过多
+      Failed = 6;          // 扫描失败
+      Canceled = 7;        // 取消
+      WaitACKTimeout = 8;  // 等待ack超时
+      Ready = 9;           // 排队等待扫描
+      CancelFailed = 10;   // 取消过程中未发现指定task或containerid
+   }
+   message TcsContainerStatus
+   {
+      required bytes containerid = 1;
+      required TcsStatus status = 2;
+      required uint32 scan_files = 3;
+      required uint32 report_hashs = 4;
+   }
+   required TcsTaskComm comm = 1;
+   repeated TcsContainerStatus ack = 2; // container扫描状态列表
+   optional bytes message = 3;          //附带信息
+}
+
+message TcsFileOperator
+{
+   optional bytes containerid = 1; // 容器id
+   optional bytes imageid = 2;     // 镜像id
+   optional int32 init_pid = 3;    //容器init pid
+   // 实时监控上报时存在如下字段
+   optional int64 pid = 4;       //运行进程pid
+   optional bytes exe = 5;       //相关进程
+   optional bytes cmdline = 6;   //命令行参数
+   optional int32 detect_by = 7; // 默认为0
+   optional uint64 reason = 8;
+   optional bytes uppdir = 9;            // uppdir (主动触发模式) , "-" 监控模式
+   optional bytes ptree = 10;            // 进程树
+   optional bytes account = 11;          // account, uname:gname
+   optional bytes authority = 12;        // 进程文件权限
+   optional bytes pod_name = 13;         // pod集群名称
+   optional bytes container_name = 14;   // 容器名
+   optional bytes image_name = 15;       // 镜像名
+   optional bytes container_status = 16; // 容器状态
+}
+
+message TcsScanHash
+{
+   required bytes md5 = 1;
+   required bytes path = 2; // 相对容器内路径
+   required int64 size = 3;
+   required uint32 mtime = 4;
+   required uint32 ctime = 5;
+   required uint32 atime = 6;
+   required bytes filetype = 7;
+   optional TcsFileOperator operator = 8;
+   required TcsTaskComm comm = 9;
+}
+
+// c->s 扫描文件hash
+message TcsScanFileHash
+{
+   required uint32 report_id = 1;
+   repeated TcsScanHash hashs = 2;
+}
+
+// s->c 确认
+message TcsScanFileHashAck
+{
+   required uint32 report_id = 1;
+   repeated TcsScanHash miss_hashs = 2; // 不存在文件内容的hash列表
+}
+
+// c->s report file
+message TcsScanFile
+{
+   message TcsFiles
+   {
+      required TcsScanHash hash = 1;
+      required bytes content = 2;
+   }
+   required uint32 report_id = 1;
+   repeated TcsFiles files = 2;
+}
+
+// s->c report file ack
+message TcsScanFileAck
+{
+   required uint32 report_id = 1;
+}
+//---------------------------容器木马扫描----------------------------------

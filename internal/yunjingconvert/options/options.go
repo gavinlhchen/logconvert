@@ -9,14 +9,14 @@ import (
 
 type Options struct {
 	GenericServerRunOptions *genericoptions.ServerRunOptions `json:"server"   mapstructure:"server"`
-	YunjingOptions          *genericoptions.YunjingOptions   `json:"yunjing"   mapstructure:"yunjing"`
+	YunjingOptions          *YunjingKafkaOptions             `json:"yunjing"   mapstructure:"yunjing"`
 	Log                     *log.Options                     `json:"log" mapstructure:"log"`
 }
 
 func NewOptions() *Options {
 	o := Options{
 		GenericServerRunOptions: genericoptions.NewServerRunOptions(),
-		YunjingOptions:          genericoptions.NewYunjingOptions(),
+		YunjingOptions:          NewYunjingOptions(),
 		Log:                     log.NewOptions(),
 	}
 
