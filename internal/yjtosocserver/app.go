@@ -1,9 +1,9 @@
-package yunjingconvert
+package yjtosocserver
 
 import (
 	"github.com/gavinlhchen/logconvert/app"
-	"github.com/gavinlhchen/logconvert/internal/yunjingconvert/config"
-	"github.com/gavinlhchen/logconvert/internal/yunjingconvert/options"
+	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/config"
+	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/options"
 	"github.com/gavinlhchen/logconvert/log"
 )
 
@@ -12,7 +12,7 @@ parse from protobuf to plain text, then send to soc's  kafka`
 
 func NewApp(basename string) *app.App {
 	opts := options.NewOptions()
-	application := app.NewApp("Yunjing Convert",
+	application := app.NewApp("Yunjing Msg Convert",
 		basename,
 		app.WithOptions(opts),
 		app.WithDescription(commandDesc),
@@ -35,5 +35,4 @@ func run(opts *options.Options) app.RunFunc {
 
 		return Run(cfg)
 	}
-
 }

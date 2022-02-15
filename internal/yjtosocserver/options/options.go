@@ -3,20 +3,21 @@ package options
 import (
 	cliflag "github.com/gavinlhchen/logconvert/cli/flag"
 	genericoptions "github.com/gavinlhchen/logconvert/internal/pkg/options"
+	yujingoptions "github.com/gavinlhchen/logconvert/internal/yjtosocserver/yunjing"
 	"github.com/gavinlhchen/logconvert/json"
 	"github.com/gavinlhchen/logconvert/log"
 )
 
 type Options struct {
 	GenericServerRunOptions *genericoptions.ServerRunOptions `json:"server"   mapstructure:"server"`
-	YunjingOptions          *YunjingKafkaOptions             `json:"yunjing"   mapstructure:"yunjing"`
+	YunjingOptions          *yujingoptions.KafkaOptions      `json:"yunjing-kafka"   mapstructure:"yunjing-kafka"`
 	Log                     *log.Options                     `json:"log" mapstructure:"log"`
 }
 
 func NewOptions() *Options {
 	o := Options{
 		GenericServerRunOptions: genericoptions.NewServerRunOptions(),
-		YunjingOptions:          NewYunjingOptions(),
+		YunjingOptions:          yujingoptions.NewYunjingOptions(),
 		Log:                     log.NewOptions(),
 	}
 

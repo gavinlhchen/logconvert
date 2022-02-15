@@ -5,7 +5,8 @@ import (
 )
 
 type ServerRunOptions struct {
-	IsaGlobalConfigPath string `json:"isa-global-config-path"   mapstructure:"isa-global-config-path"`
+	IsaGlobalConfigPath string `json:"soc-global-config-path"   mapstructure:"soc-global-config-path"`
+	RawEventTopic       string `json:"raw-event-topic"   mapstructure:"raw-event-topic"`
 }
 
 // NewServerRunOptions creates a new ServerRunOptions object with default parameters.
@@ -23,6 +24,9 @@ func (s *ServerRunOptions) Validate() []error {
 }
 
 func (s *ServerRunOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&s.IsaGlobalConfigPath, "server.isa-global-config-path", s.IsaGlobalConfigPath, ""+
+	fs.StringVar(&s.IsaGlobalConfigPath, "server.soc-global-config-path", s.IsaGlobalConfigPath, ""+
 		"Isa global config path.")
+
+	fs.StringVar(&s.RawEventTopic, "server.raw-event-topic", s.RawEventTopic, ""+
+		"raw event topic.")
 }

@@ -50,7 +50,7 @@ func main() {
 func bindUser() error {
 	if err := getUser(); err != nil {
 		// Step3: Wrap the error with a new error message and a new error code if needed.
-		return errors.WrapC(err, code.ErrEncodingFailed, "encoding user 'Lingfei Kong' failed.")
+		return errors.WrapC(err, code.ErrEncodingFailed, "encoding user 'gavinlhchen' failed.")
 	}
 
 	return nil
@@ -67,5 +67,5 @@ func getUser() error {
 
 func queryDatabase() error {
 	// Step1. Create error with specified error code.
-	return errors.WithCode(code.ErrDatabase, "user 'Lingfei Kong' not found.")
+	return errors.WithCode(code.ErrDatabase, "user 'gavinlhchen' not found.")
 }

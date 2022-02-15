@@ -1,7 +1,3 @@
-// Copyright 2020 Lingfei Kong <colin404@foxmail.com>. All rights reserved.
-// Use of this source code is governed by a MIT style
-// license that can be found in the LICENSE file.
-
 package flag
 
 // StringFlag is a string flag compatible with flags and pflags that keeps track of whether it had a value supplied or
