@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"github.com/Shopify/sarama"
-	"github.com/gavinlhchen/logconvert/log"
+	"logconvert/log"
 	"time"
 )
 

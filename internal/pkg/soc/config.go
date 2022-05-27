@@ -1,12 +1,13 @@
 package soc
 
 import (
-	"github.com/gavinlhchen/logconvert/log"
 	"github.com/spf13/viper"
+	"logconvert/log"
 )
 
 type Component struct {
 	KafkaNodes []string `mapstructure:"kafka_nodes"`
+	EsNodes    []string `mapstructure:"es_nodes"`
 }
 
 type IsaGlobal struct {

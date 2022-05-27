@@ -1,8 +1,8 @@
 package yunjing
 
 import (
-	"github.com/gavinlhchen/logconvert/errors"
-	"github.com/gavinlhchen/logconvert/log"
+	"logconvert/errors"
+	"logconvert/log"
 	"sync"
 )
 

@@ -1,6 +1,6 @@
 package app
 
-import cliflag "github.com/gavinlhchen/logconvert/cli/flag"
+import cliflag "logconvert/cli/flag"
 
 // CliOptions abstracts configuration options for reading parameters from the
 // command line.

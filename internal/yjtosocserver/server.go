@@ -2,9 +2,9 @@ package yjtosocserver
 
 import (
 	"context"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/config"
-	"github.com/gavinlhchen/logconvert/log"
 	"golang.org/x/sync/errgroup"
+	"logconvert/internal/yjtosocserver/config"
+	"logconvert/log"
 )
 
 type yjToSocServer struct {

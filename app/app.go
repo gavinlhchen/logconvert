@@ -2,19 +2,19 @@ package app
 
 import (
 	"fmt"
-	"github.com/gavinlhchen/logconvert/errors"
+	"logconvert/errors"
 
 	"os"
 
 	"github.com/fatih/color"
-	cliflag "github.com/gavinlhchen/logconvert/cli/flag"
-	"github.com/gavinlhchen/logconvert/cli/globalflag"
-	"github.com/gavinlhchen/logconvert/log"
-	"github.com/gavinlhchen/logconvert/term"
-	"github.com/gavinlhchen/logconvert/version"
-	"github.com/gavinlhchen/logconvert/version/verflag"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	cliflag "logconvert/cli/flag"
+	"logconvert/cli/globalflag"
+	"logconvert/log"
+	"logconvert/term"
+	"logconvert/version"
+	"logconvert/version/verflag"
 )
 
 var (

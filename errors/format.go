@@ -15,26 +15,6 @@ type formatInfo struct {
 	stack   *stack
 }
 
-// Format implements fmt.Formatter. https://golang.org/pkg/fmt/#hdr-Printing
-//
-// Verbs:
-//     %s  - Returns the user-safe error string mapped to the error code or
-//       ┊   the error message if none is specified.
-//     %v      Alias for %s
-//
-// Flags:
-//      #      JSON formatted output, useful for logging
-//      -      Output caller details, useful for troubleshooting
-//      +      Output full error stack details, useful for debugging
-//
-// Examples:
-//      %s:    error for internal read B
-//      %v:    error for internal read B
-//      %-v:   error for internal read B - #0 [/home/lk/workspace/golang/src/github.com/marmotedu/iam/main.go:12 (main.main)] (#100102) Internal Server Error
-//      %+v:   error for internal read B - #0 [/home/lk/workspace/golang/src/github.com/marmotedu/iam/main.go:12 (main.main)] (#100102) Internal Server Error; error for internal read A - #1 [/home/lk/workspace/golang/src/github.com/marmotedu/iam/main.go:35 (main.newErrorB)] (#100104) Validation failed
-//      %#v:   [{"error":"error for internal read B"}]
-//      %#-v:  [{"caller":"#0 /home/lk/workspace/golang/src/github.com/marmotedu/iam/main.go:12 (main.main)","error":"error for internal read B","message":"(#100102) Internal Server Error"}]
-//      %#+v:  [{"caller":"#0 /home/lk/workspace/golang/src/github.com/marmotedu/iam/main.go:12 (main.main)","error":"error for internal read B","message":"(#100102) Internal Server Error"},{"caller":"#1 /home/lk/workspace/golang/src/github.com/marmotedu/iam/main.go:35 (main.newErrorB)","error":"error for internal read A","message":"(#100104) Validation failed"}]
 func (w *withCode) Format(state fmt.State, verb rune) {
 	switch verb {
 	case 'v':

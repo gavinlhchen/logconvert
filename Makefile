@@ -1,4 +1,3 @@
-BINARY=yjtosocserver
 DIR_BIN=./bin/
 CONF=./configs/
 DIR_INSTALL=../../YujianInstaller/services/logcollect/logconvert
@@ -10,29 +9,41 @@ gitTreeState=clean
 ifneq ($(strip ${shell git status --porcelain}),)
         gitTreeState=dirty
 endif
-yjtosocserverPath=./cmd/yjtosocserver/
 
 flags='-X "logconvert/version.GitVersion=${gitVersion}" \
 -X "logconvert/version.BuildDate=${buildTime}" \
 -X "logconvert/version.GitCommit=${gitHash}" \
 -X "logconvert/version.GitTreeState=${gitTreeState}"'
 
-build:
-	go build -mod=mod -ldflags ${flags} -o ${BINARY} ${yjtosocserverPath}
+build: build_logcollecttool build_yjtosocserver
+
+build_yjtosocserver: mkdir_bin
+	go build -mod=mod -ldflags ${flags} -o yjtosocserver ./cmd/yjtosocserver/
+	mv yjtosocserver ${DIR_BIN}
+
+build_logcollecttool: mkdir_bin
+	go build -mod=mod -ldflags ${flags} -o logcollecttool ./cmd/logcollecttool/
+	mv logcollecttool ${DIR_BIN}
+
+mkdir_bin:
 	rm -rf ${DIR_BIN}
-	mkdir -p ${DIR_BIN} && mv ${BINARY} ${DIR_BIN}
+	mkdir -p ${DIR_BIN}
 
 pkg:
-	tar -zcvf ${BINARY}${DATETIME}.tar.gz ${DIR_BIN} ${DIR_CONF}
+	tar -zcvf logcollect.tar.gz ${DIR_BIN} ${DIR_CONF}
 
-install:
+install: install_logcollecttool install_yjtosocserver
+
+install_yjtosocserver:install_mkdir
+	go build -mod=mod -ldflags ${flags} -o ${DIR_INSTALL}/bin/yjtosocserver ./cmd/yjtosocserver/
+
+install_logcollecttool:install_mkdir
+	go build -mod=mod -ldflags ${flags} -o ${DIR_INSTALL}/bin/logcollecttool ./cmd/logcollecttool/
+
+install_mkdir:
 	rm -rf ${DIR_INSTALL}
 	mkdir -p ${DIR_INSTALL}
 	cp -r ./configs ${DIR_INSTALL}
-	go build -mod=mod -ldflags ${flags} -o ${DIR_INSTALL}/bin/${BINARY} ${yjtosocserverPath}
-
-debug:
-	go build -mod=mod -gcflags "-N -l" -ldflags ${flags} -o ${BINARY}
 
 test:
 	go test -v ./...

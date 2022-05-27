@@ -3,11 +3,11 @@ package code
 import (
 	"net/http"
 
-	"github.com/gavinlhchen/logconvert/errors"
 	"github.com/novalagung/gubrak"
+	"logconvert/errors"
 )
 
-// ErrCode implements `github.com/gavinlhchen/logconvert/errors`.Coder interface.
+// ErrCode implements `logconvert/errors`.Coder interface.
 type ErrCode struct {
 	// C refers to the code of the ErrCode.
 	C int

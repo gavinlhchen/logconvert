@@ -1,11 +1,11 @@
 package options
 
 import (
-	cliflag "github.com/gavinlhchen/logconvert/cli/flag"
-	genericoptions "github.com/gavinlhchen/logconvert/internal/pkg/options"
-	yujingoptions "github.com/gavinlhchen/logconvert/internal/yjtosocserver/yunjing"
-	"github.com/gavinlhchen/logconvert/json"
-	"github.com/gavinlhchen/logconvert/log"
+	cliflag "logconvert/cli/flag"
+	genericoptions "logconvert/internal/pkg/options"
+	yujingoptions "logconvert/internal/yjtosocserver/yunjing"
+	"logconvert/json"
+	"logconvert/log"
 )
 
 type Options struct {

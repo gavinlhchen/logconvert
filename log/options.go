@@ -1,3 +1,21 @@
+/*
+ * Tencent is pleased to support the open source community by making TKEStack
+ * available.
+ *
+ * Copyright (C) 2012-2019 Tencent. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy of the
+ * License at
+ *
+ * https://opensource.org/licenses/Apache-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OF ANY KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 package log
 
 import (
@@ -6,6 +24,7 @@ import (
 
 	"encoding/json"
 	"github.com/spf13/pflag"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -92,4 +111,52 @@ func (o *Options) String() string {
 	data, _ := json.Marshal(o)
 
 	return string(data)
+}
+
+// Build constructs a global zap logger from the Config and Options.
+func (o *Options) Build() error {
+	var zapLevel zapcore.Level
+	if err := zapLevel.UnmarshalText([]byte(o.Level)); err != nil {
+		zapLevel = zapcore.InfoLevel
+	}
+	encodeLevel := zapcore.CapitalLevelEncoder
+	if o.Format == consoleFormat && o.EnableColor {
+		encodeLevel = zapcore.CapitalColorLevelEncoder
+	}
+
+	zc := &zap.Config{
+		Level:             zap.NewAtomicLevelAt(zapLevel),
+		Development:       o.Development,
+		DisableCaller:     o.DisableCaller,
+		DisableStacktrace: o.DisableStacktrace,
+		Sampling: &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		},
+		Encoding: o.Format,
+		EncoderConfig: zapcore.EncoderConfig{
+			MessageKey:     "message",
+			LevelKey:       "level",
+			TimeKey:        "timestamp",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    encodeLevel,
+			EncodeTime:     timeEncoder,
+			EncodeDuration: milliSecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+			EncodeName:     zapcore.FullNameEncoder,
+		},
+		OutputPaths:      o.OutputPaths,
+		ErrorOutputPaths: o.ErrorOutputPaths,
+	}
+	logger, err := zc.Build(zap.AddStacktrace(zapcore.PanicLevel))
+	if err != nil {
+		return err
+	}
+	zap.RedirectStdLog(logger.Named(o.Name))
+	zap.ReplaceGlobals(logger)
+
+	return nil
 }

@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"github.com/Shopify/sarama"
 	"github.com/fatih/structs"
-	"github.com/gavinlhchen/logconvert/internal/pkg/soc"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/protos/ydkafka"
-	"github.com/gavinlhchen/logconvert/log"
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/satori/go.uuid"
+	"logconvert/internal/pkg/soc"
+	"logconvert/internal/yjtosocserver/protos/ydkafka"
+	"logconvert/log"
 	"time"
 )
 
@@ -72,7 +72,7 @@ func (c *EventMsgConsumer) Handle(messageValue []byte, producer sarama.AsyncProd
 		eveStr := string(evBytes)
 		rawEvent := &soc.RawEvent{
 			LogsourceIp:        "127.0.0.1",
-			LogsourceName:      "yunjing_event_msg",
+			LogsourceName:      "inner-probe-xdr_yunjing",
 			LogsourceTimestamp: time.Now().UnixNano() / 1e6,
 			LogsourceCategory:  "event",
 			RawLogCharset:      "utf-8",

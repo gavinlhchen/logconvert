@@ -4,8 +4,8 @@ import (
 	goflag "flag"
 	"strings"
 
-	"github.com/gavinlhchen/logconvert/log"
 	"github.com/spf13/pflag"
+	"logconvert/log"
 )
 
 // WordSepNormalizeFunc changes all flags that contain "_" separators.

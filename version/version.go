@@ -8,7 +8,7 @@ import (
 
 	"github.com/gosuri/uitable"
 
-	"github.com/gavinlhchen/logconvert/json"
+	"logconvert/json"
 )
 
 var (

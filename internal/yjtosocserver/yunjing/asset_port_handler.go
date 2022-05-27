@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"github.com/Shopify/sarama"
 	"github.com/fatih/structs"
-	"github.com/gavinlhchen/logconvert/internal/pkg/soc"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/protos/ydyes"
-	"github.com/gavinlhchen/logconvert/log"
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/satori/go.uuid"
+	"logconvert/internal/pkg/soc"
+	"logconvert/internal/yjtosocserver/protos/ydyes"
+	"logconvert/log"
 	"time"
 )
 
@@ -43,14 +43,14 @@ func (c *AssetPortConsumer) Handle(messageValue []byte, producer sarama.AsyncPro
 		bodyMap["BytesUuid"] = string(processInfoMsg.BytesUuid)
 		bodyMap["Platform"] = processInfoMsg.ReportType
 
-		allMap := map[string]interface{}{"Head": headMap, "Body": bodyMap}
+		allMap := map[string]interface{}{"Head": headMap, "OpenPortMsg": bodyMap}
 
 		if evStr, err := json.Marshal(allMap); err != nil {
 			log.Errorf("marshal error:%v", err)
 		} else {
 			rawEvent := &soc.RawEvent{
 				LogsourceIp:        "127.0.0.1",
-				LogsourceName:      "yunjing_asset_port",
+				LogsourceName:      "inner-probe-xdr_yunjing",
 				LogsourceTimestamp: time.Now().UnixNano() / 1e6,
 				LogsourceCategory:  "event",
 				RawLogCharset:      "utf-8",

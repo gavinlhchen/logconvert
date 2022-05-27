@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/gavinlhchen/logconvert/util/sets"
+	"logconvert/util/sets"
 )
 
 // ciphers maps strings into tls package cipher constants in

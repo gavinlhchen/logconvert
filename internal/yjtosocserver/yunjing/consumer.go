@@ -3,15 +3,14 @@ package yunjing
 import (
 	"encoding/binary"
 	"github.com/Shopify/sarama"
-	"github.com/gavinlhchen/logconvert/errors"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/protos/ydyes"
-	"github.com/gavinlhchen/logconvert/log"
 	"github.com/golang/protobuf/proto"
+	"logconvert/errors"
+	"logconvert/internal/yjtosocserver/protos/ydyes"
+	"net"
 )
 
 func recurse(m map[string]interface{}) {
 	for field, val := range m {
-		log.Infof("map msg key:%s,value:%s,%t", field, val, val)
 		if v, ok := val.(map[string]interface{}); ok {
 			recurse(v)
 		} else if v1, ok1 := val.([]byte); ok1 {
@@ -88,6 +87,23 @@ func DecryptProto(protoBuf []byte) (head *ydyes.Head, body []byte, err error) {
 		return nil, nil, err
 	}
 
+	var hostIp string
+	if string(head.GetHostip()) != "" {
+		hostIp = string(head.GetHostip())
+	} else if head.GetUint32Localip() != 0 {
+		hostIp = IpUintToString(head.GetUint32Localip())
+	}
+	head.Hostip = []byte(hostIp)
+
 	body = protoBuf[headLen+9 : headLen+9+bodyLen]
 	return head, body, nil
+}
+
+func IpUintToString(ip uint32) string {
+	var bytes [4]byte
+	bytes[0] = byte(ip & 0xFF)
+	bytes[1] = byte((ip >> 8) & 0xFF)
+	bytes[2] = byte((ip >> 16) & 0xFF)
+	bytes[3] = byte((ip >> 24) & 0xFF)
+	return net.IPv4(bytes[3], bytes[2], bytes[1], bytes[0]).String()
 }

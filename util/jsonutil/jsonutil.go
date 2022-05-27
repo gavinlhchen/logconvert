@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gavinlhchen/logconvert/json"
+	"logconvert/json"
 )
 
 type JSONRawMessage []byte

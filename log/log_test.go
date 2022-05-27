@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gavinlhchen/logconvert/log"
+	"logconvert/log"
 )
 
 func Test_WithName(t *testing.T) {

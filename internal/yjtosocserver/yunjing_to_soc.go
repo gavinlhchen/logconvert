@@ -3,11 +3,11 @@ package yjtosocserver
 import (
 	"context"
 	"github.com/Shopify/sarama"
-	"github.com/gavinlhchen/logconvert/errors"
-	"github.com/gavinlhchen/logconvert/internal/pkg/kafka"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/config"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/yunjing"
-	"github.com/gavinlhchen/logconvert/log"
+	"logconvert/errors"
+	"logconvert/internal/pkg/kafka"
+	"logconvert/internal/yjtosocserver/config"
+	"logconvert/internal/yjtosocserver/yunjing"
+	"logconvert/log"
 	"os"
 	"os/signal"
 	"sync"
@@ -94,7 +94,7 @@ func (yjTss *yjToSocWorker) Run(ctx context.Context, cancel context.CancelFunc) 
 	}()
 
 	<-yjTss.cgHandler.Ready
-	log.Infof("start consume topic %s up and running!...", yjTss.cTopic)
+	log.Infof("start consume topic %s !...", yjTss.cTopic)
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)

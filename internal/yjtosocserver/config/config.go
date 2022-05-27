@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/gavinlhchen/logconvert/internal/pkg/soc"
-	"github.com/gavinlhchen/logconvert/internal/yjtosocserver/options"
+	"logconvert/internal/pkg/soc"
+	"logconvert/internal/yjtosocserver/options"
 )
 
 type Config struct {
@@ -11,6 +11,5 @@ type Config struct {
 }
 
 func CreateConfigFromOptions(opts *options.Options) (*Config, error) {
-
 	return &Config{opts, soc.NewConfig(opts.GenericServerRunOptions.IsaGlobalConfigPath)}, nil
 }

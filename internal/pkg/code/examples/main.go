@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/gavinlhchen/logconvert/internal/pkg/code"
+	"logconvert/internal/pkg/code"
 
-	"github.com/gavinlhchen/logconvert/errors"
+	"logconvert/errors"
 )
 
 func main() {
